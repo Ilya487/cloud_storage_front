@@ -3,7 +3,6 @@ import { useAuth } from "../API/authService";
 
 const AuthQuard = () => {
   const { data, isPending } = useAuth();
-  console.log(data);
 
   if (isPending) return <p>Грузится...</p>;
   if (data.authenticated) return <Outlet />;
