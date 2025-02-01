@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SERVER_URL } from "./config";
 
 async function getFolderContent(dirId = null) {
@@ -15,10 +15,39 @@ async function getFolderContent(dirId = null) {
   }
 }
 
+async function renameFolder({ dirId, newName }) {
+  const response = await fetch("http://localhost:8000/folder/rename", {
+    method: "PATCH",
+    credentials: "include",
+    body: JSON.stringify({
+      dirId,
+      newName,
+    }),
+  });
+
+  if (response.ok) return response.json();
+  else {
+    const errorData = await response.json();
+    throw new Error(errorData.message);
+  }
+}
+
 export const useFolderContent = (dirId = null) => {
   return useQuery({
     queryKey: ["dir", dirId],
     queryFn: () => getFolderContent(dirId),
     refetchOnWindowFocus: false,
   });
+};
+
+export const useRenameFolder = () => {
+  return useMutation({
+    mutationFn: renameFolder,
+  });
+};
+
+export const useRefreshFolderContent = (dirId) => {
+  const queryClient = useQueryClient();
+
+  return () => queryClient.invalidateQueries({ queryKey: ["dir", dirId] });
 };
