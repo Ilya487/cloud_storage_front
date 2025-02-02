@@ -1,16 +1,20 @@
 import { useNavigate, useParams } from "react-router";
 import styles from "./CatalogItem.module.css";
 import { FaFolder } from "react-icons/fa";
-import { useState } from "react";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import { useRefreshFolderContent } from "../../API/fileSystemService";
 import FolderContextMenu from "../FolderContextMenu/FolderContextMenu";
+import useContextMenu from "../../hooks/useContextMenu";
 
 const CatalogItem = ({ catalogItem }) => {
   const { id, name, type } = catalogItem;
   const pathParams = useParams();
-  const [cntxMenuVisible, setCntxMenuVisible] = useState(false);
-  const [contextMenuEvent, setContextMenuEvent] = useState();
+  const {
+    isOpen: cntxMenuVisible,
+    position,
+    closeMenu,
+    handleContextMenu,
+  } = useContextMenu();
   const navigator = useNavigate();
   const refreshFolder = useRefreshFolderContent(pathParams.dirId);
 
@@ -21,13 +25,8 @@ const CatalogItem = ({ catalogItem }) => {
     navigator(updatedPath);
   }
 
-  function handleContextMenu(e) {
-    setContextMenuEvent(e);
-    setCntxMenuVisible(true);
-  }
-
   const folderRef = useOutsideHandle(["click", "contextmenu"], () =>
-    setCntxMenuVisible(false)
+    closeMenu()
   );
 
   return (
@@ -37,7 +36,7 @@ const CatalogItem = ({ catalogItem }) => {
         className={styles["folder-wrap"]}
         onContextMenu={handleContextMenu}
         ref={folderRef}
-        onClick={() => setCntxMenuVisible(false)}
+        onClick={() => closeMenu()}
       >
         {type == "folder" && <FaFolder size={65} color="#3030e7" />}
         {type == "file" && <p>{"Файл!"}</p>}
@@ -45,7 +44,7 @@ const CatalogItem = ({ catalogItem }) => {
       </div>
       {type == "folder" && (
         <FolderContextMenu
-          contextMenuEvent={contextMenuEvent}
+          coords={position}
           defaultName={name}
           dirId={id}
           onRename={refreshFolder}

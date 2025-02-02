@@ -7,7 +7,7 @@ const FolderContextMenu = ({
   defaultName,
   onRename,
   onClose,
-  contextMenuEvent,
+  coords,
   contextMenuVisible,
 }) => {
   const updatedOnClose = () => {
@@ -47,10 +47,7 @@ const FolderContextMenu = ({
   return (
     <>
       {contextMenuVisible && (
-        <ContextMenu
-          menuOptions={optionsSettings}
-          contextMenuEvent={contextMenuEvent}
-        />
+        <ContextMenu menuOptions={optionsSettings} coords={coords} />
       )}
       {optionsVisible.rename && (
         <RenameDialog

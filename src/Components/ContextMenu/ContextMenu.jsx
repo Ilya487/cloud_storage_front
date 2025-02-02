@@ -1,17 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./ContextMenu.module.css";
 
-const ContextMenu = ({ menuOptions, contextMenuEvent }) => {
+const ContextMenu = ({ menuOptions, coords }) => {
   const [menuCoords, setMenuCoords] = useState({ x: 0, y: 0 });
   const [calcCoordComplete, setCalcCoordComplete] = useState(false);
   const menu = useRef();
 
   function calculateCoord() {
-    const result = {};
-    contextMenuEvent.preventDefault();
-
-    result.x = contextMenuEvent.clientX;
-    result.y = contextMenuEvent.clientY;
+    const result = coords;
 
     const menuWidth = menu.current.offsetWidth;
     const menuHeight = menu.current.offsetHeight;
@@ -28,7 +24,7 @@ const ContextMenu = ({ menuOptions, contextMenuEvent }) => {
     setCalcCoordComplete(true);
   }
 
-  useEffect(calculateCoord, [contextMenuEvent]);
+  useEffect(calculateCoord, [coords]);
 
   return (
     <ul
