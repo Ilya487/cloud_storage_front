@@ -34,7 +34,7 @@ const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
       <div className={styles["top-block"]}>
         <p className={styles.title}>Переименовать</p>
         <IoMdCloseCircleOutline
-          className={styles["close-icon"]}
+          className="dialog__close-icon"
           onClick={handleClose}
         />
       </div>
@@ -42,21 +42,21 @@ const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
         <input
           type="text"
           value={name}
-          className={styles.input}
+          className="dialog__input"
           onInput={handleName}
           autoFocus
           onFocus={(e) => e.target.select()}
         />
         <div className={styles["buttons-block"]}>
           <button
-            className={`${styles.btn} ${styles["ok-btn"]}`}
+            className={`dialog__btn ${styles["ok-btn"]}`}
             disabled={mutation.isPending}
             type="submit"
           >
             Ок
           </button>
           <button
-            className={`${styles.btn} ${styles["cancel-btn"]}`}
+            className="dialog__btn"
             onClick={handleClose}
             disabled={mutation.isPending}
           >
