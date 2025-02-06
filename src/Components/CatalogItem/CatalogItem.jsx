@@ -48,6 +48,7 @@ const CatalogItem = ({ catalogItem }) => {
           defaultName={name}
           dirId={id}
           onRename={refreshFolder}
+          onDelete={refreshFolder}
           contextMenuVisible={cntxMenuVisible}
         />
       )}
