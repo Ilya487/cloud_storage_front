@@ -45,8 +45,7 @@ const CatalogItem = ({ catalogItem }) => {
       {type == "folder" && (
         <FolderContextMenu
           coords={position}
-          defaultName={name}
-          dirId={id}
+          item={catalogItem}
           onRename={refreshFolder}
           onDelete={refreshFolder}
           contextMenuVisible={cntxMenuVisible}

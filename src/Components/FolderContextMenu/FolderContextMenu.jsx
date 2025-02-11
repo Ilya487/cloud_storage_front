@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import ContextMenu from "../ContextMenu/ContextMenu";
 import RenameDialog from "../RenameDialog/RenameDialog";
 import DeleteDialog from "../DeleteDialog/DeleteDialog";
+import MoveDialog from "../MoveDialog/MoveDialog";
 
 const FolderContextMenu = ({
-  dirId,
-  defaultName,
+  item,
   onRename,
   onDelete,
   onClose,
@@ -20,6 +20,7 @@ const FolderContextMenu = ({
   const [optionsVisible, setOptionsVisible] = useState({
     rename: false,
     delete: false,
+    move: false,
   });
 
   function handleOptionClick(option, value) {
@@ -41,7 +42,7 @@ const FolderContextMenu = ({
       action: () => handleOptionClick("rename", true),
     },
     { label: "Скачать" },
-    { label: "Переместить" },
+    { label: "Переместить", action: () => handleOptionClick("move", true) },
     { label: "Удалить", action: () => handleOptionClick("delete", true) },
   ];
 
@@ -52,18 +53,26 @@ const FolderContextMenu = ({
       )}
       {optionsVisible.rename && (
         <RenameDialog
-          dirId={dirId}
-          defaultName={defaultName}
+          dirId={item.id}
+          defaultName={item.name}
           onRename={onRename}
           onClose={updatedOnClose}
         />
       )}
       {optionsVisible.delete && (
         <DeleteDialog
-          name={defaultName}
-          dirId={dirId}
+          name={item.name}
+          dirId={item.id}
           onClose={updatedOnClose}
           onDelete={onDelete}
+        />
+      )}
+      {optionsVisible.move && (
+        <MoveDialog
+          onClose={updatedOnClose}
+          itemName={item.name}
+          itemId={item.id}
+          itemPath={item.path}
         />
       )}
     </>
