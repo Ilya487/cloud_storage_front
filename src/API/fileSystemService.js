@@ -64,6 +64,25 @@ async function deleteFolder({ dirId }) {
   }
 }
 
+async function moveFolder({ itemId, toDirId }) {
+  toDirId = toDirId == "root" ? "" : toDirId;
+
+  const response = await fetch(SERVER_URL + "/folder/move", {
+    method: "PATCH",
+    credentials: "include",
+    body: JSON.stringify({
+      itemId,
+      toDirId,
+    }),
+  });
+
+  if (response.ok) return response.json();
+  else {
+    const errorData = await response.json();
+    throw new Error(errorData.message);
+  }
+}
+
 export const useFolderContent = (dirId = null) => {
   return useQuery({
     queryKey: ["dir", dirId],
@@ -92,4 +111,10 @@ export const useCreateFolder = () => {
 
 export const useDeleteFolder = () => {
   return useMutation({ mutationFn: deleteFolder });
+};
+
+export const useMoveFolder = () => {
+  return useMutation({
+    mutationFn: moveFolder,
+  });
 };
