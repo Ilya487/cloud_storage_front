@@ -1,6 +1,11 @@
 import { useEffect, useRef } from "react";
 
-const useOutsideHandle = (events, cb, ignoreFirstEvent = false) => {
+const useOutsideHandle = (
+  events,
+  cb,
+  ignoreFirstEvent = false,
+  includeChildNodes = true
+) => {
   const ref = useRef();
   const isFirstRender = useRef(true);
 
@@ -11,7 +16,11 @@ const useOutsideHandle = (events, cb, ignoreFirstEvent = false) => {
     }
     const target = e.target;
 
-    if (target == ref.current || ref.current.contains(target)) return;
+    if (
+      target == ref.current ||
+      (includeChildNodes && ref.current.contains(target))
+    )
+      return;
     else {
       cb();
     }

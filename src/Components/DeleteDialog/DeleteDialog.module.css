@@ -1,0 +1,24 @@
+.top-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.title {
+    font-size: 20px;
+}
+
+.buttons-block {
+    display: flex;
+    justify-content: end;
+}
+
+.ok-btn {
+    margin-right: 10px;
+}
+
+.delete-msg {
+    font-size: 17px;
+    margin-bottom: 20px;
+}
