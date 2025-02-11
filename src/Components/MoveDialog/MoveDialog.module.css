@@ -1,0 +1,113 @@
+.modal-window {
+    padding: 15px 0;
+}
+
+.top-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+
+.title {
+    font-size: 20px;
+}
+
+.buttons-block {
+    display: flex;
+    justify-content: end;
+    padding: 0 10px;
+}
+
+.ok-btn {
+    margin-right: 10px;
+}
+
+.main-body {
+    margin-bottom: 15px;
+    display: grid;
+    grid-template-rows: auto auto 4fr auto;
+    height: 350px;
+    justify-items: start;
+}
+
+.dir-list {
+    overflow-x: auto;
+    justify-self: stretch;
+    margin-bottom: 10px;
+    margin-top: 10px;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #888, #555);
+        border-radius: 10px;
+    }
+}
+
+.catalog-item {
+    display: flex;
+    padding: 5px 10px;
+    align-items: center;
+    cursor: pointer;
+    width: 100%;
+    user-select: none;
+
+    &:hover:not(.catalog-item--selected) {
+        background-color: rgb(59, 59, 59);
+    }
+
+    span {
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+.catalog-item--selected {
+    background-color: rgb(26 39 101);
+}
+
+.dir-icon {
+    margin-right: 10px;
+}
+
+.empty-dir {
+    justify-self: stretch;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.path {
+    align-self: self-end;
+    padding: 0 10px;
+    cursor: default;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    margin-bottom: 5px;
+    border-radius: 50%;
+    padding: 5px;
+    transition: all .1s linear;
+
+    &:hover {
+        background-color: #3c3b3d;
+    }
+}
+
+.back--hide {
+    display: none;
+}
