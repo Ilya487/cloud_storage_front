@@ -6,13 +6,3 @@
   min-width: 200px;
   max-width: 400px;
 }
-
-.menu-item {
-  padding: 5px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.menu-item:hover {
-  background-color: rgb(59, 59, 59);
-}

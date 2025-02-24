@@ -31,17 +31,18 @@ const CatalogContextMenu = ({
     setOptionsVisible(updatedState);
   }
 
-  const optionsSettings = [
-    {
-      label: "Создать папку",
-      action: () => handleOptionClick("createFolder", true),
-    },
-  ];
-
   return (
     <>
       {contextMenuVisible && (
-        <ContextMenu menuOptions={optionsSettings} coords={coords} />
+        <ContextMenu coords={coords}>
+          <li
+            className="context-menu__item"
+            onClick={() => handleOptionClick("createFolder", true)}
+          >
+            Создать папку
+          </li>
+          <li className="context-menu__item">Загрузить файлы</li>
+        </ContextMenu>
       )}
       {optionsVisible.createFolder && (
         <CreateFolderDialog

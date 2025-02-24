@@ -36,20 +36,30 @@ const FolderContextMenu = ({
     setOptionsVisible(updatedState);
   }
 
-  const optionsSettings = [
-    {
-      label: "Переименовать",
-      action: () => handleOptionClick("rename", true),
-    },
-    { label: "Скачать" },
-    { label: "Переместить", action: () => handleOptionClick("move", true) },
-    { label: "Удалить", action: () => handleOptionClick("delete", true) },
-  ];
-
   return (
     <>
       {contextMenuVisible && (
-        <ContextMenu menuOptions={optionsSettings} coords={coords} />
+        <ContextMenu coords={coords}>
+          <li
+            className="context-menu__item"
+            onClick={() => handleOptionClick("rename", true)}
+          >
+            Переименовать
+          </li>
+          <li className="context-menu__item">Скачать</li>
+          <li
+            className="context-menu__item"
+            onClick={() => handleOptionClick("move", true)}
+          >
+            Переместить
+          </li>
+          <li
+            className="context-menu__item"
+            onClick={() => handleOptionClick("delete", true)}
+          >
+            Удалить
+          </li>
+        </ContextMenu>
       )}
       {optionsVisible.rename && (
         <RenameDialog

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./ContextMenu.module.css";
+import clsx from "clsx";
 
-const ContextMenu = ({ menuOptions, coords }) => {
+const ContextMenu = ({ coords, children, ...args }) => {
   const [menuCoords, setMenuCoords] = useState({ x: 0, y: 0 });
   const [calcCoordComplete, setCalcCoordComplete] = useState(false);
   const menu = useRef();
 
   function calculateCoord() {
-    const result = coords;
+    const result = { ...coords };
 
     const menuWidth = menu.current.offsetWidth;
     const menuHeight = menu.current.offsetHeight;
@@ -28,7 +29,7 @@ const ContextMenu = ({ menuOptions, coords }) => {
 
   return (
     <ul
-      className={styles.menu}
+      className={clsx(styles.menu, args.className)}
       ref={menu}
       style={{
         top: menuCoords.y + "px",
@@ -36,11 +37,7 @@ const ContextMenu = ({ menuOptions, coords }) => {
         visibility: calcCoordComplete ? "visible" : "hidden",
       }}
     >
-      {menuOptions.map((item, index) => (
-        <li key={index} onClick={item.action} className={styles["menu-item"]}>
-          {item.label}
-        </li>
-      ))}
+      {children}
     </ul>
   );
 };
