@@ -4,14 +4,17 @@ export class FileSender {
   static STATUS_SENDING = "sending";
   static STATUS_CANCEL = "cancel";
   static STATUS_NOT_RUNNING = "notRunning";
+  static STATUS_PREPARING = "preparing";
   static STATUS_COMPLETE = "complete";
   static STATUS_CANCELING = "canceling";
   #status = FileSender.STATUS_NOT_RUNNING;
   #file;
+  #destinationDirId;
   #chunkSize;
   onChunkLoad;
   onFileLoad;
   onStatusUpdate;
+  onError;
   #chunkCount;
   #currentChunk;
   #xhrMap = new Map();
@@ -19,15 +22,18 @@ export class FileSender {
   #retriesCount;
   #sessionId;
 
-  constructor(file, retriesCount = 2) {
+  constructor(file, destinationDirId = null, retriesCount = 2) {
     if (!(file instanceof File)) throw new Error("Передан не файл!");
     this.serverUrl = SERVER_URL;
     this.#file = file;
     this.#retriesCount = retriesCount;
+    if (destinationDirId == "root") {
+      this.#destinationDirId = "";
+    } else this.#destinationDirId = destinationDirId;
   }
 
-  async startSending() {
-    this.#updateStatus(FileSender.STATUS_SENDING);
+  async initialize() {
+    this.#updateStatus(FileSender.STATUS_PREPARING);
     this.#currentChunk = 1;
     this.#availableThreads = 4;
     const { sessionId, chunkSize, chunkCount } =
@@ -35,12 +41,20 @@ export class FileSender {
     this.#sessionId = sessionId;
     this.#chunkSize = chunkSize;
     this.#chunkCount = chunkCount;
-    this.#sendGroupRequests();
-
     return sessionId;
   }
 
+  start() {
+    if (!this.#sessionId) {
+      throw new Error("Сессия не инициализирована!");
+    }
+
+    this.#updateStatus(FileSender.STATUS_SENDING);
+    this.#sendGroupRequests();
+  }
+
   async cancelSending() {
+    if (this.#status !== FileSender.STATUS_SENDING) return;
     this.#updateStatus(FileSender.STATUS_CANCELING);
     for (let xhr of this.#xhrMap.keys()) {
       xhr.abort();
@@ -60,7 +74,6 @@ export class FileSender {
     const tmp = this.#availableThreads;
     for (let i = 0; i < tmp; i++) {
       if (this.#currentChunk > this.#chunkCount) {
-        this.#updateStatus(FileSender.STATUS_COMPLETE);
         return;
       }
 
@@ -92,8 +105,10 @@ export class FileSender {
         if (xhr.status >= 200 && xhr.status < 300) {
           const result = JSON.parse(xhr.response);
           this.onChunkLoad && this.onChunkLoad(result);
-          if (result["progress"] == 100)
+          if (result["progress"] == 100) {
+            this.#updateStatus(FileSender.STATUS_COMPLETE);
             this.onFileLoad && this.onFileLoad(result);
+          }
           resolve();
         } else reject();
       };
@@ -110,13 +125,12 @@ export class FileSender {
           this.#sendGroupRequests();
         })
         .catch(() => {
-          console.log("Этот чанк не загрузился " + chunkNum);
-
           this.#sendChunkWithRetries(chunkNum, retries - 1);
         });
     } else {
       this.cancelSending();
-      throw new Error("Ошибка загрузки файла");
+      this.onError && this.onError("Ошибка загрузки файла");
+      throw new Error();
     }
   }
 
@@ -127,11 +141,17 @@ export class FileSender {
       body: JSON.stringify({
         fileName: this.#file.name,
         fileSize: this.#file.size,
-        destinationDirId: "",
+        destinationDirId: this.#destinationDirId,
       }),
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      this.onError && this.onError(data.message);
+      throw new Error();
+    }
+
     return {
       sessionId: data.sessionId,
       chunkSize: data.chunkSize,
@@ -139,18 +159,24 @@ export class FileSender {
     };
   }
 
-  #sendCancelRequest() {
-    return fetch(
+  async #sendCancelRequest() {
+    const response = await fetch(
       `${this.serverUrl}/upload/cancel?sessionId=${this.#sessionId}`,
       {
         credentials: "include",
         method: "DELETE",
       }
     );
+
+    if (!response.ok) {
+      this.onError && this.onError("Ошибка отмены запроса");
+      throw new Error();
+    }
   }
 
   #updateStatus(status) {
+    if (this.#status == status) return;
     this.#status = status;
-    this.onStatusUpdate(status);
+    this.onStatusUpdate && this.onStatusUpdate(status);
   }
 }
