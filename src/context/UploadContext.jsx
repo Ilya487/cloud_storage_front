@@ -1,5 +1,7 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { FileSender } from "../API/FileSender";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 
 const UploadContext = createContext();
 
@@ -7,11 +9,13 @@ export const UploadProvider = ({ children }) => {
   const [activeUploads, setActiveUploads] = useState([]);
   const [preparingUploads, setPreparingUploads] = useState([]);
   const [cancelUploads, setCancelUploads] = useState([]);
+  const queryClient = useQueryClient();
+  const navigator = useNavigate();
 
   function addUploads(files, destinationDirId) {
     if (activeUploads.size == 3) return;
     if (files instanceof FileList) {
-      [...files].forEach((file) => createUploadSession(file, destinationDirId));
+      [...files].forEach(file => createUploadSession(file, destinationDirId));
     }
   }
 
@@ -23,7 +27,11 @@ export const UploadProvider = ({ children }) => {
       updateSessionProgress(sessionId, progress);
     };
 
-    fileSender.onStatusUpdate = (status) => {
+    fileSender.onFileLoad = () => {
+      addReadySession(sessionId);
+    };
+
+    fileSender.onStatusUpdate = status => {
       if (status == FileSender.STATUS_PREPARING) {
         updatePreparingSessionStatus(generatedKey, status);
       } else {
@@ -32,7 +40,7 @@ export const UploadProvider = ({ children }) => {
       }
     };
 
-    fileSender.onError = (message) => {
+    fileSender.onError = message => {
       if (fileSender.getStatus() == FileSender.STATUS_PREPARING) {
         cancelPreparingSession(generatedKey, message);
       } else cancelActiveSession(sessionId, message);
@@ -61,36 +69,25 @@ export const UploadProvider = ({ children }) => {
   }
 
   function cancelActiveSession(id, reason) {
-    setActiveUploads((currentActiveUploads) => {
-      const canceledSession = currentActiveUploads.find(
-        (session) => session.id == id
-      );
+    setActiveUploads(currentActiveUploads => {
+      const canceledSession = currentActiveUploads.find(session => session.id == id);
       addCancelSession(canceledSession, reason);
 
-      return currentActiveUploads.filter((session) => session.id !== id);
+      return currentActiveUploads.filter(session => session.id !== id);
     });
   }
 
   function cancelPreparingSession(id, reason) {
-    setPreparingUploads((currentPreapringUploads) => {
-      const canceledSession = currentPreapringUploads.find(
-        (session) => session.id == id
-      );
+    setPreparingUploads(currentPreapringUploads => {
+      const canceledSession = currentPreapringUploads.find(session => session.id == id);
       addCancelSession(canceledSession, reason);
 
-      return currentPreapringUploads.filter((session) => session.id !== id);
+      return currentPreapringUploads.filter(session => session.id !== id);
     });
   }
 
-  function addUploadSession({
-    id,
-    file,
-    cancelUpload,
-    status,
-    destinationDirId,
-  }) {
-    setActiveUploads((uploads) => [
-      ...uploads,
+  function addUploadSession({ id, file, cancelUpload, status, destinationDirId }) {
+    setActiveUploads(uploads => [
       {
         id,
         file,
@@ -99,11 +96,12 @@ export const UploadProvider = ({ children }) => {
         status,
         destinationDirId,
       },
+      ...uploads,
     ]);
   }
 
   function addPreparingSession({ id, file, status, destinationDirId }) {
-    setPreparingUploads((uploads) => [
+    setPreparingUploads(uploads => [
       ...uploads,
       {
         id,
@@ -115,45 +113,34 @@ export const UploadProvider = ({ children }) => {
   }
 
   function updateSessionProgress(id, progress) {
-    setActiveUploads((uploads) =>
-      uploads.map((session) =>
-        session.id == id ? { ...session, progress } : session
-      )
+    setActiveUploads(uploads =>
+      uploads.map(session => (session.id == id ? { ...session, progress } : session))
     );
   }
 
   function updateSessionStatus(id, newStatus) {
-    setActiveUploads((uploads) =>
-      uploads.map((session) =>
-        session.id == id ? { ...session, status: newStatus } : session
-      )
+    setActiveUploads(uploads =>
+      uploads.map(session => (session.id == id ? { ...session, status: newStatus } : session))
     );
   }
 
   function updatePreparingSessionStatus(id, newStatus) {
-    setPreparingUploads((uploads) =>
-      uploads.map((session) =>
-        session.id == id ? { ...session, status: newStatus } : session
-      )
+    setPreparingUploads(uploads =>
+      uploads.map(session => (session.id == id ? { ...session, status: newStatus } : session))
     );
   }
 
   function deletePreparingSession(id) {
-    setPreparingUploads((uploads) =>
-      uploads.filter((session) => session.id != id)
-    );
+    setPreparingUploads(uploads => uploads.filter(session => session.id != id));
   }
 
   function deleteCancelSession(id) {
-    setCancelUploads((uploads) =>
-      uploads.filter((session) => session.id != id)
-    );
+    setCancelUploads(uploads => uploads.filter(session => session.id != id));
   }
 
   function addCancelSession(canceledSession, reason) {
-    setCancelUploads((uploads) => {
-      if (uploads.some((session) => session.id == canceledSession.id))
-        return uploads;
+    setCancelUploads(uploads => {
+      if (uploads.some(session => session.id == canceledSession.id)) return uploads;
       return [
         ...uploads,
         {
@@ -161,16 +148,38 @@ export const UploadProvider = ({ children }) => {
           reason,
           restart: () => {
             deleteCancelSession(canceledSession.id);
-            createUploadSession(
-              canceledSession.file,
-              canceledSession.destinationDirId
-            );
+            createUploadSession(canceledSession.file, canceledSession.destinationDirId);
           },
           delete: () => {
             deleteCancelSession(canceledSession.id);
           },
         },
       ];
+    });
+  }
+
+  function addReadySession(sessionId) {
+    setActiveUploads(uploads => {
+      const updatedSession = uploads[uploads.findIndex(value => value.id == sessionId)];
+      updatedSession.openDir = () => {
+        navigator(`/catalog/${updatedSession.destinationDirId}`);
+      };
+
+      updatedSession.readyAt = Date.now();
+      uploads.sort((a, b) => {
+        const needStatus = FileSender.STATUS_COMPLETE;
+        if (a.status == needStatus && b.status == needStatus) {
+          return b.readyAt - a.readyAt;
+        }
+        if (a.status == needStatus) return 1;
+        if (b.status == needStatus) return -1;
+        return 0;
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["dir", updatedSession.destinationDirId],
+      });
+      return [...uploads];
     });
   }
 
