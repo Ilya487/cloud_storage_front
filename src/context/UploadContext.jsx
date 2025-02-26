@@ -22,6 +22,7 @@ export const UploadProvider = ({ children }) => {
   async function createUploadSession(file, destinationDirId) {
     const fileSender = new FileSender(file, destinationDirId);
     const generatedKey = file.name + Date.now();
+    let sessionId;
 
     fileSender.onChunkLoad = ({ progress }) => {
       updateSessionProgress(sessionId, progress);
@@ -33,6 +34,13 @@ export const UploadProvider = ({ children }) => {
 
     fileSender.onStatusUpdate = status => {
       if (status == FileSender.STATUS_PREPARING) {
+        addPreparingSession({
+          id: generatedKey,
+          file,
+          status,
+          destinationDirId,
+        });
+      } else if (status == FileSender.STATUS_CANCEL && !sessionId) {
         updatePreparingSessionStatus(generatedKey, status);
       } else {
         deletePreparingSession(generatedKey);
@@ -41,18 +49,12 @@ export const UploadProvider = ({ children }) => {
     };
 
     fileSender.onError = message => {
-      if (fileSender.getStatus() == FileSender.STATUS_PREPARING) {
+      if (!sessionId) {
         cancelPreparingSession(generatedKey, message);
       } else cancelActiveSession(sessionId, message);
     };
 
-    addPreparingSession({
-      id: generatedKey,
-      file,
-      status: fileSender.getStatus(),
-      destinationDirId,
-    });
-    const sessionId = await fileSender.initialize();
+    sessionId = await fileSender.initialize();
     fileSender.start();
 
     addUploadSession({
@@ -142,7 +144,6 @@ export const UploadProvider = ({ children }) => {
     setCancelUploads(uploads => {
       if (uploads.some(session => session.id == canceledSession.id)) return uploads;
       return [
-        ...uploads,
         {
           ...canceledSession,
           reason,
@@ -154,6 +155,7 @@ export const UploadProvider = ({ children }) => {
             deleteCancelSession(canceledSession.id);
           },
         },
+        ...uploads,
       ];
     });
   }

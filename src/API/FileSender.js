@@ -36,8 +36,7 @@ export class FileSender {
     this.#updateStatus(FileSender.STATUS_PREPARING);
     this.#currentChunk = 1;
     this.#availableThreads = 4;
-    const { sessionId, chunkSize, chunkCount } =
-      await this.#sendInitializeRequest();
+    const { sessionId, chunkSize, chunkCount } = await this.#sendInitializeRequest();
     this.#sessionId = sessionId;
     this.#chunkSize = chunkSize;
     this.#chunkCount = chunkCount;
@@ -92,10 +91,7 @@ export class FileSender {
     xhr.setRequestHeader("X-Chunk-Num", currentChunk);
 
     xhr.send(
-      this.#file.slice(
-        this.#chunkSize * (currentChunk - 1),
-        this.#chunkSize * currentChunk
-      )
+      this.#file.slice(this.#chunkSize * (currentChunk - 1), this.#chunkSize * currentChunk)
     );
     this.#xhrMap.set(xhr, xhr);
 
@@ -148,6 +144,7 @@ export class FileSender {
     const data = await response.json();
 
     if (!response.ok) {
+      this.#updateStatus(FileSender.STATUS_CANCEL);
       this.onError && this.onError(data.message);
       throw new Error();
     }
@@ -160,13 +157,10 @@ export class FileSender {
   }
 
   async #sendCancelRequest() {
-    const response = await fetch(
-      `${this.serverUrl}/upload/cancel?sessionId=${this.#sessionId}`,
-      {
-        credentials: "include",
-        method: "DELETE",
-      }
-    );
+    const response = await fetch(`${this.serverUrl}/upload/cancel?sessionId=${this.#sessionId}`, {
+      credentials: "include",
+      method: "DELETE",
+    });
 
     if (!response.ok) {
       this.onError && this.onError("Ошибка отмены запроса");
