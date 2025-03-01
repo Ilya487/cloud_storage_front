@@ -140,6 +140,10 @@ export const UploadProvider = ({ children }) => {
     setCancelUploads(uploads => uploads.filter(session => session.id != id));
   }
 
+  function deleteReadySession(id) {
+    setActiveUploads(uploads => uploads.filter(session => session.id != id));
+  }
+
   function addCancelSession(canceledSession, reason) {
     setCancelUploads(uploads => {
       if (uploads.some(session => session.id == canceledSession.id)) return uploads;
@@ -166,6 +170,7 @@ export const UploadProvider = ({ children }) => {
       updatedSession.openDir = () => {
         navigator(`/catalog/${updatedSession.destinationDirId}`);
       };
+      updatedSession.delete = () => deleteReadySession(updatedSession.id);
 
       updatedSession.readyAt = Date.now();
       uploads.sort((a, b) => {
