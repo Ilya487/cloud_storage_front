@@ -1,0 +1,10 @@
+.cancel {
+    cursor: pointer;
+    width: 25px;
+    height: 25px;
+    transition: all 0.2s linear;
+
+    &:hover {
+        color: red;
+    }
+}

@@ -1,8 +1,8 @@
-import { IoMdCloseCircleOutline } from "react-icons/io";
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./DeleteDialog.module.css";
 import { useDeleteFolder } from "../../API/fileSystemService";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
+import CancelBtn from "../CancelBtn/CancelBtn";
 
 const DeleteDialog = ({ dirId, name, onDelete, onClose }) => {
   const mutation = useDeleteFolder();
@@ -30,14 +30,9 @@ const DeleteDialog = ({ dirId, name, onDelete, onClose }) => {
     <ModalWindow ref={modalWindowRef}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Удалить навсегда?</p>
-        <IoMdCloseCircleOutline
-          className="dialog__close-icon"
-          onClick={handleClose}
-        />
+        <CancelBtn onClick={handleClose} />
       </div>
-      <p className={styles["delete-msg"]}>
-        Объект "{name}" будет удален навсегда.
-      </p>
+      <p className={styles["delete-msg"]}>Объект "{name}" будет удален навсегда.</p>
       <form onSubmit={submitDelete}>
         <div className={styles["buttons-block"]}>
           <button

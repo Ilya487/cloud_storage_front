@@ -1,4 +1,3 @@
-import { IoMdCloseCircleOutline } from "react-icons/io";
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./MoveDialog.module.css";
 import { useFolderContent, useMoveFolder } from "../../API/fileSystemService";
@@ -9,6 +8,7 @@ import { useNavigate } from "react-router";
 import CatalogList from "./CatalogList";
 import { ItemCurrentPath, Path } from "./Path";
 import BackButton from "./BackButton";
+import CancelBtn from "../CancelBtn/CancelBtn";
 
 const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
@@ -17,7 +17,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   const { data, isPending } = useFolderContent(currentDirId);
   const filteredData = (() => {
     if (!data) return;
-    const filteredContent = data.contents.filter((object) => {
+    const filteredContent = data.contents.filter(object => {
       if (object.type == "file") return false;
       if (object.id == itemId) return false;
       return true;
@@ -66,10 +66,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
     <ModalWindow className={styles["modal-window"]} ref={modalWindowRef}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Перемещение объекта "{itemName}"</p>
-        <IoMdCloseCircleOutline
-          className="dialog__close-icon"
-          onClick={handleClose}
-        />
+        <CancelBtn onClick={handleClose} />
       </div>
       <div className={styles["main-body"]}>
         <BackButton onBack={goBack} canGoBack={pathMap.current.length != 0} />
@@ -84,9 +81,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
             onMoveInDir={goInDir}
             onSelect={selectDir}
             selectedDirId={selectedDirId}
-            showMoveToRoot={
-              currentDirId == "root" && itemPath.match(/\//g).length > 1
-            }
+            showMoveToRoot={currentDirId == "root" && itemPath.match(/\//g).length > 1}
           />
         )}
         {data && <Path path={data.path} />}
@@ -99,11 +94,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
         >
           Переместить
         </button>
-        <button
-          className="dialog__btn"
-          onClick={handleClose}
-          disabled={mutation.isPending}
-        >
+        <button className="dialog__btn" onClick={handleClose} disabled={mutation.isPending}>
           Отмена
         </button>
       </div>
