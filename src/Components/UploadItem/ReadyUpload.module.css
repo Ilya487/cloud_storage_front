@@ -1,0 +1,11 @@
+.ready-status {
+    color: green;
+    display: flex;
+    gap: 8px;
+}
+
+.open-dir {
+    color: rgb(31, 83, 126);
+    border-bottom: 1px solid rgb(31, 83, 126);
+    ;
+}
