@@ -6,13 +6,18 @@ import readyStyles from "./ReadyUpload.module.css";
 
 const UploadingItem = ({ session }) => {
   if (session.status == FileSender.STATUS_SENDING) {
+    const totalSize = (session.file.size / 1024 / 1024).toFixed(2);
+    const readySize = (((session.file.size / 1024 / 1024) * session.progress) / 100).toFixed(2);
+
     return (
       <li className={styles["upload-item"]}>
         <div className={styles.top}>
           <p>{session.file.name}</p>
           <CancelBtn onClick={session.cancelUpload} />
         </div>
-        <span className={styles.status}>Загрузка...</span>
+        <span className={styles["load-info"]}>
+          Готово {readySize}MB из {totalSize}MB
+        </span>
         <div className={styles["progress-bar"]}>
           <div style={{ width: session.progress + "%" }}></div>
         </div>
