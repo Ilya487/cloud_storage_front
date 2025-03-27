@@ -1,17 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ContextMenu from "../ContextMenu/ContextMenu";
 import RenameDialog from "../RenameDialog/RenameDialog";
 import DeleteDialog from "../DeleteDialog/DeleteDialog";
 import MoveDialog from "../MoveDialog/MoveDialog";
+import { downloadObject } from "../../API/fileSystemService";
+import { toast } from "react-toastify";
 
-const FolderContextMenu = ({
-  item,
-  onRename,
-  onDelete,
-  onClose,
-  coords,
-  contextMenuVisible,
-}) => {
+const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMenuVisible }) => {
   const updatedOnClose = () => {
     disableActiveOptions();
     onClose && onClose();
@@ -36,27 +31,33 @@ const FolderContextMenu = ({
     setOptionsVisible(updatedState);
   }
 
+  async function download(id) {
+    toast.promise(
+      downloadObject(id),
+      {
+        pending: `Подготовка к загрузке "${item.name}"`,
+        error: `Не удалось загрузить "${item.name}"`,
+      },
+      {
+        position: "top-center",
+      }
+    );
+  }
+
   return (
     <>
       {contextMenuVisible && (
         <ContextMenu coords={coords}>
-          <li
-            className="context-menu__item"
-            onClick={() => handleOptionClick("rename", true)}
-          >
+          <li className="context-menu__item" onClick={() => handleOptionClick("rename", true)}>
             Переименовать
           </li>
-          <li className="context-menu__item">Скачать</li>
-          <li
-            className="context-menu__item"
-            onClick={() => handleOptionClick("move", true)}
-          >
+          <li className="context-menu__item" onClick={() => download(item.id)}>
+            Скачать
+          </li>
+          <li className="context-menu__item" onClick={() => handleOptionClick("move", true)}>
             Переместить
           </li>
-          <li
-            className="context-menu__item"
-            onClick={() => handleOptionClick("delete", true)}
-          >
+          <li className="context-menu__item" onClick={() => handleOptionClick("delete", true)}>
             Удалить
           </li>
         </ContextMenu>
@@ -89,4 +90,4 @@ const FolderContextMenu = ({
   );
 };
 
-export default FolderContextMenu;
+export default ItemContextMenu;
