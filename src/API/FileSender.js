@@ -11,6 +11,7 @@ export class FileSender {
   #file;
   #destinationDirId;
   #chunkSize;
+  #path;
   onChunkLoad;
   onFileLoad;
   onStatusUpdate;
@@ -36,10 +37,11 @@ export class FileSender {
     this.#updateStatus(FileSender.STATUS_PREPARING);
     this.#currentChunk = 1;
     this.#availableThreads = 4;
-    const { sessionId, chunkSize, chunkCount } = await this.#sendInitializeRequest();
+    const { sessionId, chunkSize, chunkCount, path } = await this.#sendInitializeRequest();
     this.#sessionId = sessionId;
     this.#chunkSize = chunkSize;
     this.#chunkCount = chunkCount;
+    this.#path = path;
     return sessionId;
   }
 
@@ -65,6 +67,10 @@ export class FileSender {
 
   getStatus() {
     return this.#status;
+  }
+
+  getPath() {
+    return this.#path;
   }
 
   #sendGroupRequests() {
@@ -153,6 +159,7 @@ export class FileSender {
       sessionId: data.sessionId,
       chunkSize: data.chunkSize,
       chunkCount: data.chunksCount,
+      path: data.path,
     };
   }
 

@@ -67,6 +67,7 @@ export const UploadProvider = ({ children }) => {
       id: sessionId,
       file,
       status: fileSender.getStatus(),
+      path: fileSender.getPath(),
       destinationDirId,
       cancelUpload: async () => {
         if (fileSender.getStatus() !== FileSender.STATUS_SENDING) return;
@@ -94,7 +95,7 @@ export const UploadProvider = ({ children }) => {
     });
   }
 
-  function addUploadSession({ id, file, cancelUpload, status, destinationDirId }) {
+  function addUploadSession({ id, file, cancelUpload, status, destinationDirId, path }) {
     setActiveUploads(uploads => [
       {
         id,
@@ -103,6 +104,7 @@ export const UploadProvider = ({ children }) => {
         cancelUpload,
         status,
         destinationDirId,
+        path,
       },
       ...uploads,
     ]);

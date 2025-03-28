@@ -23,6 +23,11 @@
     margin-top: 5px;
 }
 
+.path {
+    display: block;
+    margin-bottom: 5px;
+}
+
 .progress-bar {
     height: 6px;
     width: 100%;

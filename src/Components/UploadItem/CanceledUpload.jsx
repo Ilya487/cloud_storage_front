@@ -11,6 +11,7 @@ const CanceledUpload = ({ session }) => {
         <p>{session.file.name}</p>
         <CancelBtn onClick={session.delete} />
       </div>
+      {session.path && <span className={styles.path}>Путь: {session.path}</span>}
       <div className={cancelStyles["bottom-wrap"]}>
         <span className={clsx(styles.status, cancelStyles["cancel-reason"])}>{session.reason}</span>
         <div className={cancelStyles["restart-wrap"]}>

@@ -15,6 +15,7 @@ const UploadingItem = ({ session }) => {
           <p>{session.file.name}</p>
           <CancelBtn onClick={session.cancelUpload} />
         </div>
+        <span className={styles.path}>Путь: {session.path}</span>
         <span className={styles["load-info"]}>
           Готово {readySize}MB из {totalSize}MB
         </span>
@@ -31,6 +32,7 @@ const UploadingItem = ({ session }) => {
         <div className={styles.top}>
           <p>{session.file.name}</p>
         </div>
+        {session.path && <span className={styles.path}>Путь: {session.path}</span>}
         <span className={styles.status}>Отмена...</span>
         <div className={clsx(styles["loading-bar"], styles["canceling-bar"])}></div>
       </li>
@@ -44,6 +46,7 @@ const UploadingItem = ({ session }) => {
           <p>{session.file.name}</p>
           <CancelBtn onClick={session.delete} />
         </div>
+        <span className={styles.path}>Путь: {session.path}</span>
         <div className={clsx(styles.status, readyStyles["ready-status"])}>
           <span>Готово</span>
           <button
