@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { FileSender } from "../API/FileSender";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
+import { toast } from "react-toastify";
 
 const UploadContext = createContext();
 
@@ -29,6 +30,11 @@ export const UploadProvider = ({ children }) => {
     };
 
     fileSender.onFileLoad = () => {
+      toast(`Файл "${file.name}" успешно загружен.`, {
+        type: "success",
+        position: "top-center",
+        autoClose: 2500,
+      });
       addReadySession(sessionId);
     };
 
