@@ -1,12 +1,12 @@
-import { IoMdCloseCircleOutline } from "react-icons/io";
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./CreateFolderDialog.module.css";
 import useInput from "../../hooks/useInput";
 import { useCreateFolder } from "../../API/fileSystemService";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
+import CancelBtn from "../CancelBtn/CancelBtn";
 
 const CreateFolderDialog = ({ dirId, onFolderCreate, onClose }) => {
-  const [name, handleName] = useInput("");
+  const [name, handleName] = useInput("Новая папка");
   const mutation = useCreateFolder();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
 
@@ -32,10 +32,7 @@ const CreateFolderDialog = ({ dirId, onFolderCreate, onClose }) => {
     <ModalWindow ref={modalWindowRef}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Создать папку</p>
-        <IoMdCloseCircleOutline
-          className="dialog__close-icon"
-          onClick={handleClose}
-        />
+        <CancelBtn onClick={handleClose} />
       </div>
       <form onSubmit={submitCreateFolder}>
         <input
@@ -44,7 +41,7 @@ const CreateFolderDialog = ({ dirId, onFolderCreate, onClose }) => {
           className="dialog__input"
           onInput={handleName}
           autoFocus
-          onFocus={(e) => e.target.select()}
+          onFocus={e => e.target.select()}
         />
         <div className={styles["buttons-block"]}>
           <button
@@ -54,11 +51,7 @@ const CreateFolderDialog = ({ dirId, onFolderCreate, onClose }) => {
           >
             Ок
           </button>
-          <button
-            className="dialog__btn"
-            onClick={handleClose}
-            disabled={mutation.isPending}
-          >
+          <button className="dialog__btn" onClick={handleClose} disabled={mutation.isPending}>
             Отмена
           </button>
         </div>

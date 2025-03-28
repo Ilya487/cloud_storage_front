@@ -69,3 +69,13 @@ body::before {
     margin-bottom: 15px;
     font-size: 17px;
 }
+
+.context-menu__item {
+    padding: 5px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.context-menu__item:hover {
+    background-color: rgb(59, 59, 59);
+}

@@ -1,9 +1,9 @@
 import { useRenameFolder } from "../../API/fileSystemService";
 import useInput from "../../hooks/useInput";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
+import CancelBtn from "../CancelBtn/CancelBtn";
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./RenameDialog.module.css";
-import { IoMdCloseCircleOutline } from "react-icons/io";
 
 const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
   const [name, handleName] = useInput(defaultName);
@@ -33,10 +33,7 @@ const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
     <ModalWindow ref={modalWindowRef}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Переименовать</p>
-        <IoMdCloseCircleOutline
-          className="dialog__close-icon"
-          onClick={handleClose}
-        />
+        <CancelBtn onClick={handleClose} />
       </div>
       <form onSubmit={submitRename}>
         <input
@@ -45,7 +42,7 @@ const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
           className="dialog__input"
           onInput={handleName}
           autoFocus
-          onFocus={(e) => e.target.select()}
+          onFocus={e => e.target.select()}
         />
         <div className={styles["buttons-block"]}>
           <button
@@ -55,11 +52,7 @@ const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
           >
             Ок
           </button>
-          <button
-            className="dialog__btn"
-            onClick={handleClose}
-            disabled={mutation.isPending}
-          >
+          <button className="dialog__btn" onClick={handleClose} disabled={mutation.isPending}>
             Отмена
           </button>
         </div>
