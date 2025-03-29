@@ -1,4 +1,4 @@
-import { useRenameFolder } from "../../API/fileSystemService";
+import { useRenameObject } from "../../API/fileSystemService";
 import useInput from "../../hooks/useInput";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
@@ -7,7 +7,7 @@ import styles from "./RenameDialog.module.css";
 
 const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
   const [name, handleName] = useInput(defaultName);
-  const mutation = useRenameFolder();
+  const mutation = useRenameObject();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
 
   function handleClose() {

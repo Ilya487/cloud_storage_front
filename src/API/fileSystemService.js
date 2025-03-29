@@ -15,8 +15,8 @@ async function getFolderContent(dirId = null) {
   }
 }
 
-async function renameFolder({ dirId, newName }) {
-  const response = await fetch(SERVER_URL + "/folder/rename", {
+async function renameObject({ dirId, newName }) {
+  const response = await fetch(SERVER_URL + "/rename", {
     method: "PATCH",
     credentials: "include",
     body: JSON.stringify({
@@ -113,9 +113,9 @@ export const useFolderContent = (dirId = null) => {
   });
 };
 
-export const useRenameFolder = () => {
+export const useRenameObject = () => {
   return useMutation({
-    mutationFn: renameFolder,
+    mutationFn: renameObject,
   });
 };
 
