@@ -15,12 +15,12 @@ async function getFolderContent(dirId = null) {
   }
 }
 
-async function renameObject({ dirId, newName }) {
+async function renameObject({ objectId, newName }) {
   const response = await fetch(SERVER_URL + "/rename", {
     method: "PATCH",
     credentials: "include",
     body: JSON.stringify({
-      dirId,
+      objectId,
       newName,
     }),
   });

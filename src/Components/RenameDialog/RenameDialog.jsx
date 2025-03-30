@@ -5,10 +5,22 @@ import CancelBtn from "../CancelBtn/CancelBtn";
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./RenameDialog.module.css";
 
-const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
-  const [name, handleName] = useInput(defaultName);
+const RenameDialog = ({ objectId, defaultName, onRename, onClose, type }) => {
+  const [extPos, ext] = getExt();
+
+  const [name, handleName] = useInput(defaultName.slice(0, extPos));
   const mutation = useRenameObject();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
+
+  function getExt() {
+    if (type == "folder") return [undefined, ""];
+
+    const extPos = defaultName.lastIndexOf(".");
+    if (extPos == -1) return [undefined, ""];
+    const ext = defaultName.slice(extPos);
+
+    return [extPos, ext];
+  }
 
   function handleClose() {
     onClose();
@@ -16,10 +28,10 @@ const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
 
   function submitRename(e) {
     e.preventDefault();
-    if (name == defaultName) return;
+    if (name + ext == defaultName) return;
 
     mutation.mutate(
-      { dirId, newName: name },
+      { objectId, newName: name + ext },
       {
         onSuccess: () => {
           handleClose();
