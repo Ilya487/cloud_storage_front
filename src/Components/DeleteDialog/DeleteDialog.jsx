@@ -1,11 +1,11 @@
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./DeleteDialog.module.css";
-import { useDeleteFolder } from "../../API/fileSystemService";
+import { useDeleteObject } from "../../API/fileSystemService";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
 
-const DeleteDialog = ({ dirId, name, onDelete, onClose }) => {
-  const mutation = useDeleteFolder();
+const DeleteDialog = ({ objectId, name, onDelete, onClose }) => {
+  const mutation = useDeleteObject();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
 
   function handleClose() {
@@ -16,7 +16,7 @@ const DeleteDialog = ({ dirId, name, onDelete, onClose }) => {
     e.preventDefault();
 
     mutation.mutate(
-      { dirId },
+      { objectId },
       {
         onSuccess: () => {
           handleClose();

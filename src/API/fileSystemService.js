@@ -51,8 +51,8 @@ async function createFolder({ name, parentDirId }) {
   }
 }
 
-async function deleteFolder({ dirId }) {
-  const response = await fetch(SERVER_URL + `/folder/delete?dirId=${dirId}`, {
+async function deleteObject({ objectId }) {
+  const response = await fetch(SERVER_URL + `/delete?objectId=${objectId}`, {
     method: "DELETE",
     credentials: "include",
   });
@@ -131,8 +131,15 @@ export const useCreateFolder = () => {
   });
 };
 
-export const useDeleteFolder = () => {
-  return useMutation({ mutationFn: deleteFolder });
+export const useDeleteObject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteObject,
+    onSuccess: (_, { objectId }) => {
+      queryClient.removeQueries({ queryKey: ["dir", objectId.toString()] });
+    },
+  });
 };
 
 export const useMoveFolder = () => {
