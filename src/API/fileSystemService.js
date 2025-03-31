@@ -64,10 +64,10 @@ async function deleteObject({ objectId }) {
   }
 }
 
-async function moveFolder({ itemId, toDirId }) {
+async function moveObject({ itemId, toDirId }) {
   toDirId = toDirId == "root" ? "" : toDirId;
 
-  const response = await fetch(SERVER_URL + "/folder/move", {
+  const response = await fetch(SERVER_URL + "/move", {
     method: "PATCH",
     credentials: "include",
     body: JSON.stringify({
@@ -144,6 +144,6 @@ export const useDeleteObject = () => {
 
 export const useMoveFolder = () => {
   return useMutation({
-    mutationFn: moveFolder,
+    mutationFn: moveObject,
   });
 };
