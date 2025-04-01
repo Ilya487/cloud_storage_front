@@ -29,7 +29,7 @@ const CreateFolderDialog = ({ dirId, onFolderCreate, onClose }) => {
   }
 
   return (
-    <ModalWindow ref={modalWindowRef}>
+    <ModalWindow ref={modalWindowRef} closeCb={handleClose}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Создать папку</p>
         <CancelBtn onClick={handleClose} />

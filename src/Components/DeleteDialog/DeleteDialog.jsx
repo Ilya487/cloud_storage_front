@@ -27,7 +27,7 @@ const DeleteDialog = ({ objectId, name, onDelete, onClose }) => {
   }
 
   return (
-    <ModalWindow ref={modalWindowRef}>
+    <ModalWindow ref={modalWindowRef} closeCb={handleClose}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Удалить навсегда?</p>
         <CancelBtn onClick={handleClose} />

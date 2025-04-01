@@ -64,7 +64,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   }
 
   return (
-    <ModalWindow className={styles["modal-window"]} ref={modalWindowRef}>
+    <ModalWindow className={styles["modal-window"]} ref={modalWindowRef} closeCb={handleClose}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Перемещение объекта "{itemName}"</p>
         <CancelBtn onClick={handleClose} />

@@ -3,16 +3,10 @@ import styles from "./MoveDialog.module.css";
 import { FaFolder } from "react-icons/fa";
 import clsx from "clsx";
 
-const CatalogList = ({
-  catalog,
-  onSelect,
-  onMoveInDir,
-  selectedDirId,
-  showMoveToRoot,
-}) => {
+const CatalogList = ({ catalog, onSelect, onMoveInDir, selectedDirId, showMoveToRoot }) => {
   return (
     <ul className={styles["dir-list"]}>
-      {catalog.map((item) => (
+      {catalog.map(item => (
         <li
           key={item.id}
           onClick={() => onSelect(item.id)}
@@ -34,11 +28,7 @@ const CatalogList = ({
             selectedDirId == "root" && styles["catalog-item--selected"]
           )}
         >
-          <TiCloudStorage
-            size={35}
-            color="#3030e7"
-            className={styles["dir-icon"]}
-          />
+          <TiCloudStorage size={35} color="#3030e7" className={styles["dir-icon"]} />
           <span>Мой диск</span>
         </li>
       )}
