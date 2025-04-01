@@ -9,6 +9,7 @@ import CatalogList from "./CatalogList";
 import { ItemCurrentPath, Path } from "./Path";
 import BackButton from "./BackButton";
 import CancelBtn from "../CancelBtn/CancelBtn";
+import Spinner from "../Spinner/Spinner";
 
 const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
@@ -71,7 +72,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
       <div className={styles["main-body"]}>
         <BackButton onBack={goBack} canGoBack={pathMap.current.length != 0} />
         <ItemCurrentPath path={itemPath} />
-        {isPending && <p style={{ fontSize: "50px" }}>Загрузка...</p>}
+        {isPending && <Spinner className={styles.loader} />}
         {data && data.contents.length == 0 && (
           <p className={styles["empty-dir"]}>Здесь ничего нет...</p>
         )}
