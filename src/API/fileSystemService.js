@@ -106,6 +106,8 @@ export async function downloadObject(id) {
 }
 
 export const useFolderContent = (dirId = null) => {
+  if (!isNaN(dirId)) dirId = Number.parseInt(dirId);
+
   return useQuery({
     queryKey: ["dir", dirId],
     queryFn: () => getFolderContent(dirId),
@@ -121,6 +123,7 @@ export const useRenameObject = () => {
 
 export const useRefreshFolderContent = dirId => {
   const queryClient = useQueryClient();
+  if (!isNaN(dirId)) dirId = Number.parseInt(dirId);
 
   return () => queryClient.invalidateQueries({ queryKey: ["dir", dirId] });
 };
@@ -137,7 +140,7 @@ export const useDeleteObject = () => {
   return useMutation({
     mutationFn: deleteObject,
     onSuccess: (_, { objectId }) => {
-      queryClient.removeQueries({ queryKey: ["dir", objectId.toString()] });
+      queryClient.removeQueries({ queryKey: ["dir", objectId] });
     },
   });
 };
