@@ -51,15 +51,11 @@ body::before {
     }
 }
 
-.dialog__close-icon {
-    cursor: pointer;
-    width: 25px;
-    height: 25px;
-    transition: all 0.2s linear;
-
-    &:hover {
-        color: red;
-    }
+.dialog__btn:focus {
+    outline: 2px solid rgba(0, 123, 255, 0.8);
+    box-shadow: 0 0 12px rgba(0, 123, 255, 0.8),
+        0 0 24px rgba(0, 123, 255, 0.6);
+    background-color: rgba(0, 123, 255, 0.1);
 }
 
 .dialog__input {
