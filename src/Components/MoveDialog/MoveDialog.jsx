@@ -10,6 +10,7 @@ import { ItemCurrentPath, Path } from "./Path";
 import BackButton from "./BackButton";
 import CancelBtn from "../CancelBtn/CancelBtn";
 import Spinner from "../Spinner/Spinner";
+import useErrorToast from "../../hooks/useErrorToast";
 
 const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
@@ -30,6 +31,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   const [selectedDirId, setSelectedDirId] = useState();
   const mutation = useMoveFolder();
   const navigate = useNavigate();
+  const showErrorToast = useErrorToast();
 
   function handleClose() {
     onClose();
@@ -59,6 +61,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
           handleClose();
           navigate(`/catalog/${selectedDirId}`);
         },
+        onError: error => showErrorToast(error.message),
       }
     );
   }

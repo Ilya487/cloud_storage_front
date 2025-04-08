@@ -3,10 +3,12 @@ import styles from "./DeleteDialog.module.css";
 import { useDeleteObject } from "../../API/fileSystemService";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
+import useErrorToast from "../../hooks/useErrorToast";
 
 const DeleteDialog = ({ objectId, name, onDelete, onClose }) => {
   const mutation = useDeleteObject();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
+  const showErrorToast = useErrorToast();
 
   function handleClose() {
     onClose();
@@ -22,6 +24,7 @@ const DeleteDialog = ({ objectId, name, onDelete, onClose }) => {
           handleClose();
           onDelete();
         },
+        onError: error => showErrorToast(error.message),
       }
     );
   }

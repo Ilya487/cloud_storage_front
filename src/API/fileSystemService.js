@@ -28,7 +28,10 @@ async function renameObject({ objectId, newName }) {
   if (response.ok) return response.json();
   else {
     const errorData = await response.json();
-    throw new Error(errorData.message);
+    if (errorData.errors) {
+      const message = errorData.errors.join("; ");
+      throw new Error(message);
+    } else throw new Error(errorData.message);
   }
 }
 
@@ -47,7 +50,10 @@ async function createFolder({ name, parentDirId }) {
   if (response.ok) return response.json();
   else {
     const errorData = await response.json();
-    throw new Error(errorData.message);
+    if (errorData.errors) {
+      const message = errorData.errors.join("; ");
+      throw new Error(message);
+    } else throw new Error(errorData.message);
   }
 }
 

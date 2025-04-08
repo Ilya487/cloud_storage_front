@@ -1,4 +1,5 @@
 import { useRenameObject } from "../../API/fileSystemService";
+import useErrorToast from "../../hooks/useErrorToast";
 import useInput from "../../hooks/useInput";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
@@ -11,6 +12,7 @@ const RenameDialog = ({ objectId, defaultName, onRename, onClose, type }) => {
   const [name, handleName] = useInput(defaultName.slice(0, extPos));
   const mutation = useRenameObject();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
+  const showErrorToast = useErrorToast();
 
   function getExt() {
     if (type == "folder") return [undefined, ""];
@@ -37,6 +39,7 @@ const RenameDialog = ({ objectId, defaultName, onRename, onClose, type }) => {
           handleClose();
           onRename();
         },
+        onError: error => showErrorToast(error.message),
       }
     );
   }
