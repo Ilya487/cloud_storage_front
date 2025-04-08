@@ -64,7 +64,8 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
       )}
       {optionsVisible.rename && (
         <RenameDialog
-          dirId={item.id}
+          type={item.type}
+          objectId={item.id}
           defaultName={item.name}
           onRename={onRename}
           onClose={updatedOnClose}
@@ -73,7 +74,7 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
       {optionsVisible.delete && (
         <DeleteDialog
           name={item.name}
-          dirId={item.id}
+          objectId={item.id}
           onClose={updatedOnClose}
           onDelete={onDelete}
         />

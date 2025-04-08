@@ -9,6 +9,8 @@ import CatalogList from "./CatalogList";
 import { ItemCurrentPath, Path } from "./Path";
 import BackButton from "./BackButton";
 import CancelBtn from "../CancelBtn/CancelBtn";
+import Spinner from "../Spinner/Spinner";
+import useErrorToast from "../../hooks/useErrorToast";
 
 const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
@@ -29,6 +31,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   const [selectedDirId, setSelectedDirId] = useState();
   const mutation = useMoveFolder();
   const navigate = useNavigate();
+  const showErrorToast = useErrorToast();
 
   function handleClose() {
     onClose();
@@ -58,12 +61,13 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
           handleClose();
           navigate(`/catalog/${selectedDirId}`);
         },
+        onError: error => showErrorToast(error.message),
       }
     );
   }
 
   return (
-    <ModalWindow className={styles["modal-window"]} ref={modalWindowRef}>
+    <ModalWindow className={styles["modal-window"]} ref={modalWindowRef} closeCb={handleClose}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Перемещение объекта "{itemName}"</p>
         <CancelBtn onClick={handleClose} />
@@ -71,7 +75,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
       <div className={styles["main-body"]}>
         <BackButton onBack={goBack} canGoBack={pathMap.current.length != 0} />
         <ItemCurrentPath path={itemPath} />
-        {isPending && <p style={{ fontSize: "50px" }}>Загрузка...</p>}
+        {isPending && <Spinner className={styles.loader} />}
         {data && data.contents.length == 0 && (
           <p className={styles["empty-dir"]}>Здесь ничего нет...</p>
         )}

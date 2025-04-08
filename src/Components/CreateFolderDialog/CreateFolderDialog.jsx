@@ -4,11 +4,13 @@ import useInput from "../../hooks/useInput";
 import { useCreateFolder } from "../../API/fileSystemService";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
+import useErrorToast from "../../hooks/useErrorToast";
 
 const CreateFolderDialog = ({ dirId, onFolderCreate, onClose }) => {
   const [name, handleName] = useInput("Новая папка");
   const mutation = useCreateFolder();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
+  const showErrorToast = useErrorToast();
 
   function handleClose() {
     onClose();
@@ -24,12 +26,13 @@ const CreateFolderDialog = ({ dirId, onFolderCreate, onClose }) => {
           handleClose();
           onFolderCreate();
         },
+        onError: error => showErrorToast(error.message),
       }
     );
   }
 
   return (
-    <ModalWindow ref={modalWindowRef}>
+    <ModalWindow ref={modalWindowRef} closeCb={handleClose}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Создать папку</p>
         <CancelBtn onClick={handleClose} />

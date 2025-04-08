@@ -3,20 +3,19 @@ import styles from "./CatalogItem.module.css";
 import { FaFile, FaFolder } from "react-icons/fa";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import { useRefreshFolderContent } from "../../API/fileSystemService";
-import FolderContextMenu from "../ItemContextMenu/ItemContextMenu";
 import useContextMenu from "../../hooks/useContextMenu";
 import ItemContextMenu from "../ItemContextMenu/ItemContextMenu";
 
 const CatalogItem = ({ catalogItem }) => {
   const { id, name, type } = catalogItem;
-  const pathParams = useParams();
+  const { dirId } = useParams();
   const { isOpen: cntxMenuVisible, position, closeMenu, handleContextMenu } = useContextMenu();
   const navigator = useNavigate();
-  const refreshFolder = useRefreshFolderContent(pathParams.dirId);
+  const refreshFolder = useRefreshFolderContent(dirId);
 
   function openFolder() {
     const currentPath = window.location.pathname;
-    const updatedPath = currentPath.replace(pathParams.dirId, id);
+    const updatedPath = currentPath.replace(dirId, id);
 
     navigator(updatedPath);
   }

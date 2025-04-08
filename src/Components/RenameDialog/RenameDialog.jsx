@@ -1,14 +1,28 @@
-import { useRenameFolder } from "../../API/fileSystemService";
+import { useRenameObject } from "../../API/fileSystemService";
+import useErrorToast from "../../hooks/useErrorToast";
 import useInput from "../../hooks/useInput";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./RenameDialog.module.css";
 
-const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
-  const [name, handleName] = useInput(defaultName);
-  const mutation = useRenameFolder();
+const RenameDialog = ({ objectId, defaultName, onRename, onClose, type }) => {
+  const [extPos, ext] = getExt();
+
+  const [name, handleName] = useInput(defaultName.slice(0, extPos));
+  const mutation = useRenameObject();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
+  const showErrorToast = useErrorToast();
+
+  function getExt() {
+    if (type == "folder") return [undefined, ""];
+
+    const extPos = defaultName.lastIndexOf(".");
+    if (extPos == -1) return [undefined, ""];
+    const ext = defaultName.slice(extPos);
+
+    return [extPos, ext];
+  }
 
   function handleClose() {
     onClose();
@@ -16,21 +30,22 @@ const RenameDialog = ({ dirId, defaultName, onRename, onClose }) => {
 
   function submitRename(e) {
     e.preventDefault();
-    if (name == defaultName) return;
+    if (name + ext == defaultName) return;
 
     mutation.mutate(
-      { dirId, newName: name },
+      { objectId, newName: name + ext },
       {
         onSuccess: () => {
           handleClose();
           onRename();
         },
+        onError: error => showErrorToast(error.message),
       }
     );
   }
 
   return (
-    <ModalWindow ref={modalWindowRef}>
+    <ModalWindow ref={modalWindowRef} closeCb={handleClose}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Переименовать</p>
         <CancelBtn onClick={handleClose} />

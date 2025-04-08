@@ -15,9 +15,9 @@ export const UploadProvider = ({ children }) => {
 
   function addUploads(files, destinationDirId) {
     if (activeUploads.size == 3) return;
-    if (files instanceof FileList) {
-      [...files].forEach(file => createUploadSession(file, destinationDirId));
-    }
+    files.forEach(file => {
+      if (file instanceof File) createUploadSession(file, destinationDirId);
+    });
   }
 
   async function createUploadSession(file, destinationDirId) {

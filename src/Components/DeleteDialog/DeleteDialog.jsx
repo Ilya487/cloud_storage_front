@@ -1,12 +1,14 @@
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./DeleteDialog.module.css";
-import { useDeleteFolder } from "../../API/fileSystemService";
+import { useDeleteObject } from "../../API/fileSystemService";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
+import useErrorToast from "../../hooks/useErrorToast";
 
-const DeleteDialog = ({ dirId, name, onDelete, onClose }) => {
-  const mutation = useDeleteFolder();
+const DeleteDialog = ({ objectId, name, onDelete, onClose }) => {
+  const mutation = useDeleteObject();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
+  const showErrorToast = useErrorToast();
 
   function handleClose() {
     onClose();
@@ -16,18 +18,19 @@ const DeleteDialog = ({ dirId, name, onDelete, onClose }) => {
     e.preventDefault();
 
     mutation.mutate(
-      { dirId },
+      { objectId },
       {
         onSuccess: () => {
           handleClose();
           onDelete();
         },
+        onError: error => showErrorToast(error.message),
       }
     );
   }
 
   return (
-    <ModalWindow ref={modalWindowRef}>
+    <ModalWindow ref={modalWindowRef} closeCb={handleClose}>
       <div className={styles["top-block"]}>
         <p className={styles.title}>Удалить навсегда?</p>
         <CancelBtn onClick={handleClose} />

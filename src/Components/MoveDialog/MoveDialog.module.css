@@ -30,6 +30,7 @@
     grid-template-rows: auto auto 4fr auto;
     height: 350px;
     justify-items: start;
+    position: relative;
 }
 
 .dir-list {
@@ -84,6 +85,7 @@
 }
 
 .path {
+    font-size: 15px;
     align-self: self-end;
     padding: 0 10px;
     cursor: default;
@@ -110,4 +112,11 @@
 
 .back--hide {
     display: none;
+}
+
+.loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }

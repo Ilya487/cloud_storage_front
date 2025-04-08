@@ -3,7 +3,7 @@ import styles from "./MoveDialog.module.css";
 const ItemCurrentPath = ({ path }) => {
   return (
     <p className={styles.path} title={path}>
-      Текущее местоположение: {path}
+      Расположение: {path}
     </p>
   );
 };

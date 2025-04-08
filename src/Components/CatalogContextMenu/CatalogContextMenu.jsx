@@ -32,7 +32,7 @@ const CatalogContextMenu = ({ onClose, contextMenuVisible, coords, dirId, onFold
 
   function handleUpload(e) {
     const files = e.target.files;
-    addUploads(files, dirId);
+    addUploads([...files], dirId);
     navigator("/upload");
   }
   const fileSelector = useRef();
