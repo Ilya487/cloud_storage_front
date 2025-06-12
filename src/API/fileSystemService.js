@@ -111,19 +111,87 @@ export async function downloadObject(id) {
   URL.revokeObjectURL(link.href);
 }
 
+async function getDirIdByPath(path) {
+  const response = await fetch(SERVER_URL + `/folder/id-by-path?path=${path}`, {
+    credentials: "include",
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    return data.dirId;
+  } else {
+    const errorData = await response.json();
+    throw new Error(errorData.message);
+  }
+}
+
+export function useDirIdByPath() {
+  const queryClient = useQueryClient();
+
+  return async path => {
+    const data = await queryClient.fetchQuery({
+      queryKey: ["idByPath", path],
+      queryFn: () => getDirIdByPath(path),
+      staleTime: Infinity,
+    });
+
+    return data;
+  };
+}
+
+function useCacheDirPath() {
+  const queryClient = useQueryClient();
+
+  return (path, id) => {
+    queryClient.prefetchQuery({
+      queryKey: ["idByPath", path],
+      staleTime: Infinity,
+      gcTime: Infinity,
+      queryFn: () => id,
+    });
+  };
+}
+
+function useDeleteCacheDirPath() {
+  const queryClient = useQueryClient();
+
+  return id => {
+    const { path } = queryClient.getQueryData(["dir", id]) ?? {};
+    if (path) {
+      queryClient.removeQueries({
+        queryKey: ["idByPath"],
+        predicate: query => {
+          const keyPath = query.queryKey[1];
+          return keyPath.startsWith(path);
+        },
+      });
+    }
+  };
+}
+
 export const useFolderContent = (dirId = null) => {
   if (!isNaN(dirId)) dirId = Number.parseInt(dirId);
+  const cacheDirPath = useCacheDirPath();
 
   return useQuery({
     queryKey: ["dir", dirId],
-    queryFn: () => getFolderContent(dirId),
+    queryFn: async () => {
+      const data = await getFolderContent(dirId);
+      cacheDirPath(data.path, dirId);
+      return data;
+    },
     refetchOnWindowFocus: false,
   });
 };
 
 export const useRenameObject = () => {
+  const deleteDirPathCache = useDeleteCacheDirPath();
+
   return useMutation({
     mutationFn: renameObject,
+    onSuccess: (_, { objectId }) => {
+      deleteDirPathCache(objectId);
+    },
   });
 };
 
@@ -142,17 +210,24 @@ export const useCreateFolder = () => {
 
 export const useDeleteObject = () => {
   const queryClient = useQueryClient();
+  const deleteDirPathCache = useDeleteCacheDirPath();
 
   return useMutation({
     mutationFn: deleteObject,
     onSuccess: (_, { objectId }) => {
+      deleteDirPathCache(objectId);
       queryClient.removeQueries({ queryKey: ["dir", objectId] });
     },
   });
 };
 
 export const useMoveFolder = () => {
+  const deleteDirPathCache = useDeleteCacheDirPath();
+
   return useMutation({
     mutationFn: moveObject,
+    onSuccess: (_, { itemId }) => {
+      deleteDirPathCache(itemId);
+    },
   });
 };

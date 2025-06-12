@@ -8,6 +8,7 @@ import styles from "./Catalog.module.css";
 import { useUpload } from "../../context/UploadContext";
 import clsx from "clsx";
 import { useState } from "react";
+import PathNavigator from "../../Components/PathNavigator/PathNavigator";
 
 const Catalog = () => {
   const NOT_INI = "notIni";
@@ -83,6 +84,7 @@ const Catalog = () => {
         onDragLeave={handleLeave}
         onDragOver={handleOver}
       >
+        <PathNavigator path={data.path} />
         {data.contents.length > 0 &&
           data.contents.map(item => <CatalogItem key={item.id} catalogItem={item} />)}
 

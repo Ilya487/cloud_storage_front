@@ -1,0 +1,97 @@
+.path-selector {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.menu-container {
+    position: relative;
+    display: inline-block;
+    margin-right: 15px;
+}
+
+.menu-btn {
+    cursor: pointer;
+    display: block;
+    position: relative;
+}
+
+.menu-container::before {
+    content: '';
+    position: absolute;
+    width: 35px;
+    height: 35px;
+    background-color: #4a494ba8;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    opacity: 0;
+    transition: all .1s linear;
+}
+
+.menu-container:hover::before {
+    opacity: 1;
+}
+
+.menu-items {
+    position: absolute;
+    top: 100%;
+    left: 0;
+}
+
+.menu-item {
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.path-items {
+    display: flex;
+    overflow: hidden;
+    justify-content: left;
+}
+
+.path-item {
+    font-size: 24px;
+    max-width: 300px;
+    display: flex;
+    align-items: center;
+}
+
+.path-item+.path-item {
+    margin-left: 10px;
+}
+
+.dir-name {
+    cursor: pointer;
+    margin-right: 10px;
+    display: block;
+    position: relative;
+
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dir-name::before {
+    position: absolute;
+    content: '';
+    display: block;
+    top: calc(100% - 1px);
+    width: 100%;
+    height: 1px;
+    background-color: white;
+    transition: all 0.2s linear;
+    opacity: 0;
+}
+
+.dir-name:hover::before {
+    opacity: 1;
+}
+
+.arrow {
+    min-width: 24px;
+}
