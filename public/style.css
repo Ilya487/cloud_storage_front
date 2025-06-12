@@ -66,6 +66,14 @@ body::before {
     font-size: 17px;
 }
 
+.context-menu {
+    background-color: rgb(75, 75, 75);
+    border-radius: 5px;
+    padding: 5px 0;
+    min-width: 200px;
+    max-width: 400px;
+}
+
 .context-menu__item {
     padding: 5px;
     cursor: pointer;

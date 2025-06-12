@@ -29,7 +29,7 @@ const ContextMenu = ({ coords, children, ...args }) => {
 
   return (
     <ul
-      className={clsx(styles.menu, args.className)}
+      className={clsx("context-menu", styles.menu, args.className)}
       ref={menu}
       style={{
         top: menuCoords.y + "px",
