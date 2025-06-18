@@ -9,3 +9,11 @@
     box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
     color: #c7d2fe;
 }
+
+.catalog-items {}
+
+.catalog-headers {
+    display: grid;
+    grid-template-columns: 4fr 1fr 1fr;
+    padding: 5px;
+}

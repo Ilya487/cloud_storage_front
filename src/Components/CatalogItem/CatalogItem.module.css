@@ -1,4 +1,35 @@
-.folder-wrap {
+.catalog-item {
+    padding: 5px;
+    display: grid;
+    grid-template-columns: 4fr 1fr 1fr;
+    align-items: center;
+}
+
+.catalog-item:hover {
+    background-color: gray;
+}
+
+.catalog-item--selected {
+    background-color: gray;
+}
+
+.icon {
+    min-width: 35px;
+    min-height: 35px;
+    margin-right: 15px;
+}
+
+.filename {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+
+    span {
+        pointer-events: none;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
 }

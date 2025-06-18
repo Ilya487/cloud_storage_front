@@ -85,8 +85,18 @@ const Catalog = () => {
         onDragOver={handleOver}
       >
         <PathNavigator path={data.path} />
-        {data.contents.length > 0 &&
-          data.contents.map(item => <CatalogItem key={item.id} catalogItem={item} />)}
+        {data.contents.length > 0 && (
+          <ul className={styles["catalog-items"]}>
+            <li className={styles["catalog-headers"]}>
+              <span>Название</span>
+              <span>Дата создания</span>
+              <span>Размер файла</span>
+            </li>
+            {data.contents.map(item => (
+              <CatalogItem key={item.id} catalogItem={item} />
+            ))}
+          </ul>
+        )}
 
         {data.contents.length == 0 && <p>{"тут ничего нет"}</p>}
       </section>
