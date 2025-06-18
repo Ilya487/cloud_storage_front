@@ -23,6 +23,24 @@ const CatalogItem = ({ catalogItem }) => {
     navigator(updatedPath);
   }
 
+  function fileSizeDisplay(size) {
+    if (size < 1000) {
+      return size + " байт";
+    }
+    size = size / 1024;
+    if (size < 1000) {
+      return size.toFixed(1) + " КБ";
+    }
+    size = size / 1024;
+    if (size < 1000) {
+      return size.toFixed(1) + " МБ";
+    }
+    size = size / 1024;
+    if (size < 1000) {
+      return size.toFixed(1) + " ГБ";
+    }
+  }
+
   const folderRef = useOutsideHandle(["click", "contextmenu"], () => closeMenu());
 
   return (
@@ -46,7 +64,7 @@ const CatalogItem = ({ catalogItem }) => {
           <span>{name}</span>
         </div>
         <div>{created_at}</div>
-        <div>{size ? size : "—"}</div>
+        <div>{size ? fileSizeDisplay(size) : "—"}</div>
       </li>
 
       <ItemContextMenu
