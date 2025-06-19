@@ -5,6 +5,7 @@ import DeleteDialog from "../DeleteDialog/DeleteDialog";
 import MoveDialog from "../MoveDialog/MoveDialog";
 import { downloadObject } from "../../API/fileSystemService";
 import { toast } from "react-toastify";
+import { createPortal } from "react-dom";
 
 const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMenuVisible }) => {
   const updatedOnClose = () => {
@@ -46,22 +47,25 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
 
   return (
     <>
-      {contextMenuVisible && (
-        <ContextMenu coords={coords}>
-          <li className="context-menu__item" onClick={() => handleOptionClick("rename", true)}>
-            Переименовать
-          </li>
-          <li className="context-menu__item" onClick={() => download(item.id)}>
-            Скачать
-          </li>
-          <li className="context-menu__item" onClick={() => handleOptionClick("move", true)}>
-            Переместить
-          </li>
-          <li className="context-menu__item" onClick={() => handleOptionClick("delete", true)}>
-            Удалить
-          </li>
-        </ContextMenu>
-      )}
+      {contextMenuVisible &&
+        createPortal(
+          <ContextMenu coords={coords}>
+            <li className="context-menu__item" onClick={() => handleOptionClick("rename", true)}>
+              Переименовать
+            </li>
+            <li className="context-menu__item" onClick={() => download(item.id)}>
+              Скачать
+            </li>
+            <li className="context-menu__item" onClick={() => handleOptionClick("move", true)}>
+              Переместить
+            </li>
+            <li className="context-menu__item" onClick={() => handleOptionClick("delete", true)}>
+              Удалить
+            </li>
+          </ContextMenu>,
+          document.body
+        )}
+
       {optionsVisible.rename && (
         <RenameDialog
           type={item.type}
