@@ -23,6 +23,7 @@
     display: flex;
     align-items: center;
     overflow: hidden;
+    margin-right: 10px;
 
     span {
         pointer-events: none;

@@ -36,21 +36,27 @@ const CatalogFilter = ({ filterSetup, setFilterSetup }) => {
   return (
     <li className={styles["catalog-headers"]}>
       <div className={styles["filter-item"]}>
-        <span onClick={() => setFilter("name")}>Название</span>
+        <button onClick={() => setFilter("name")} className={styles["filter-btn"]}>
+          Название
+        </button>
         <FaArrowDown
           display={filterSetup.name ? "true" : "none"}
           className={clsx(styles.arrow, filterSetup.ascending && styles["arrow--up"])}
         />
       </div>
       <div className={styles["filter-item"]}>
-        <span onClick={() => setFilter("date")}>Дата создания</span>{" "}
+        <button onClick={() => setFilter("date")} className={styles["filter-btn"]}>
+          Дата создания
+        </button>{" "}
         <FaArrowDown
           display={filterSetup.date ? "true" : "none"}
           className={clsx(styles.arrow, filterSetup.ascending && styles["arrow--up"])}
         />
       </div>
       <div className={styles["filter-item"]}>
-        <span onClick={() => setFilter("size")}>Размер файла</span>
+        <button onClick={() => setFilter("size")} className={styles["filter-btn"]}>
+          Размер файла
+        </button>
         <FaArrowDown
           display={filterSetup.size ? "true" : "none"}
           className={clsx(styles.arrow, filterSetup.ascending && styles["arrow--up"])}
