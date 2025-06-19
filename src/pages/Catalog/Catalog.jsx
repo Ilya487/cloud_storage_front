@@ -9,6 +9,8 @@ import { useUpload } from "../../context/UploadContext";
 import clsx from "clsx";
 import { useState } from "react";
 import PathNavigator from "../../Components/PathNavigator/PathNavigator";
+import useFilteredCatalog from "./useFilteredCatalog";
+import CatalogFilter from "../../Components/CatalogFilter/CatalogFilter";
 
 const Catalog = () => {
   const NOT_INI = "notIni";
@@ -21,6 +23,14 @@ const Catalog = () => {
   const [canBeDrop, setCanBeDrop] = useState(NOT_INI);
   const { addUploads } = useUpload();
   const navigator = useNavigate();
+
+  const [filterSetup, setFilterSetup] = useState({
+    name: false,
+    date: true,
+    size: false,
+    ascending: true,
+  });
+  const filteredCatalog = useFilteredCatalog(data?.contents, filterSetup);
 
   function handleDrop(e) {
     e.preventDefault();
@@ -87,12 +97,8 @@ const Catalog = () => {
         <PathNavigator path={data.path} />
         {data.contents.length > 0 && (
           <ul className={styles["catalog-items"]}>
-            <li className={styles["catalog-headers"]}>
-              <span>Название</span>
-              <span>Дата создания</span>
-              <span>Размер файла</span>
-            </li>
-            {data.contents.map(item => (
+            <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
+            {filteredCatalog?.map(item => (
               <CatalogItem key={item.id} catalogItem={item} />
             ))}
           </ul>
