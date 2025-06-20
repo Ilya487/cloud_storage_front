@@ -36,6 +36,7 @@
 
 .menu-items {
     position: absolute;
+    z-index: 100;
     top: 100%;
     left: 0;
 }

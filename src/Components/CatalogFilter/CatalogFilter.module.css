@@ -1,0 +1,45 @@
+.catalog-headers {
+    display: grid;
+    grid-template-columns: 4fr 1fr 1fr;
+    padding: 5px;
+}
+
+.filter-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-btn {
+    font-size: 16px;
+    position: relative;
+}
+
+.filter-btn::before {
+    content: '';
+    display: block;
+    position: absolute;
+    width: 125%;
+    height: 125%;
+    border-radius: 10px;
+    z-index: -1;
+    background-color: #4a494ba8;
+
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity .1s linear;
+    opacity: 0;
+}
+
+.filter-btn:hover::before {
+    opacity: 0.6;
+}
+
+.arrow {
+    z-index: -1;
+}
+
+.arrow--up {
+    transform: rotate(180deg);
+}

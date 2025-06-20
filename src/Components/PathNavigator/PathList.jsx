@@ -11,7 +11,7 @@ const PathList = ({ pathMap, currentPath }) => {
   const navigator = useNavigate();
   const getIdByPath = useDirIdByPath();
   const [menuVisible, setMenuVisible] = useState(false);
-  const menuRef = useOutsideHandle(["click"], () => setMenuVisible(false));
+  const menuRef = useOutsideHandle(["click", "contextmenu"], () => setMenuVisible(false));
 
   const [visibleItems, hideItems] = splitItems();
 
