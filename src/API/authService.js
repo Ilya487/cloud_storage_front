@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SERVER_URL } from "./config";
 
 async function checkAuth() {
-  const response = await fetch(SERVER_URL + "/check-auth", {
+  const response = await fetch(SERVER_URL + "/auth/check-auth", {
     credentials: "include",
   });
 
@@ -10,7 +10,7 @@ async function checkAuth() {
 }
 
 async function signinUser({ login, password }) {
-  const response = await fetch(SERVER_URL + "/signin", {
+  const response = await fetch(SERVER_URL + "/auth/signin", {
     method: "POST",
     credentials: "include",
     body: JSON.stringify({ login, password }),
@@ -24,7 +24,7 @@ async function signinUser({ login, password }) {
 }
 
 async function logOut() {
-  const response = await fetch(SERVER_URL + "/logout", {
+  const response = await fetch(SERVER_URL + "/auth/logout", {
     credentials: "include",
     method: "POST",
   });
@@ -33,7 +33,7 @@ async function logOut() {
 }
 
 async function signupUser({ login, password }) {
-  const response = await fetch(SERVER_URL + "/signup", {
+  const response = await fetch(SERVER_URL + "/auth/signup", {
     method: "POST",
     credentials: "include",
     body: JSON.stringify({ login, password }),
