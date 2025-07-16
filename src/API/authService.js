@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SERVER_URL } from "./config";
+import useApi from "./useApi";
 
-async function checkAuth() {
-  const response = await fetch(SERVER_URL + "/auth/check-auth", {
+const getAuthUser = () => ({
+  url: SERVER_URL + "/auth/user",
+  options: {
     credentials: "include",
-  });
-
-  return response.json();
-}
+  },
+});
 
 async function signinUser({ login, password }) {
   const response = await fetch(SERVER_URL + "/auth/signin", {
@@ -46,12 +46,17 @@ async function signupUser({ login, password }) {
   }
 }
 
-export const useAuth = () =>
-  useQuery({
-    queryKey: ["auth"],
-    queryFn: checkAuth,
-    staleTime: 1000 * 60 * 25,
+export const useGetUser = () => {
+  const apiFetch = useApi();
+  const queryFn = () => apiFetch(getAuthUser());
+
+  return useQuery({
+    queryKey: ["authUser"],
+    queryFn,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
+};
 
 export const useSignin = () => {
   const queryClient = useQueryClient();

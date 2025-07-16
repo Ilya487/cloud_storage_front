@@ -1,92 +1,72 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SERVER_URL } from "./config";
+import useApi from "./useApi";
 
-async function getFolderContent(dirId = null) {
+function getFolderContent(dirId = null) {
   dirId = dirId == "root" ? "" : dirId;
 
-  const response = await fetch(SERVER_URL + `/folder?dirId=${dirId}`, {
-    credentials: "include",
-  });
-
-  if (response.ok) return response.json();
-  else {
-    const errorData = await response.json();
-    throw new Error(errorData.message);
-  }
+  return {
+    url: SERVER_URL + `/folder?dirId=${dirId}`,
+    options: {
+      credentials: "include",
+    },
+  };
 }
 
-async function renameObject({ objectId, newName }) {
-  const response = await fetch(SERVER_URL + "/rename", {
-    method: "PATCH",
-    credentials: "include",
-    body: JSON.stringify({
-      objectId,
-      newName,
-    }),
-  });
-
-  if (response.ok) return response.json();
-  else {
-    const errorData = await response.json();
-    if (errorData.errors) {
-      const message = errorData.errors.join("; ");
-      throw new Error(message);
-    } else throw new Error(errorData.message);
-  }
+function renameObject({ objectId, newName }) {
+  return {
+    url: SERVER_URL + "/rename",
+    options: {
+      method: "PATCH",
+      credentials: "include",
+      body: JSON.stringify({
+        objectId,
+        newName,
+      }),
+    },
+  };
 }
 
-async function createFolder({ name, parentDirId }) {
+function createFolder({ name, parentDirId }) {
   parentDirId = parentDirId == "root" ? "" : parentDirId;
 
-  const response = await fetch(SERVER_URL + "/folder", {
-    method: "POST",
-    credentials: "include",
-    body: JSON.stringify({
-      dirName: name,
-      parentDirId,
-    }),
-  });
-
-  if (response.ok) return response.json();
-  else {
-    const errorData = await response.json();
-    if (errorData.errors) {
-      const message = errorData.errors.join("; ");
-      throw new Error(message);
-    } else throw new Error(errorData.message);
-  }
+  return {
+    url: SERVER_URL + "/folder",
+    options: {
+      method: "POST",
+      credentials: "include",
+      body: JSON.stringify({
+        dirName: name,
+        parentDirId,
+      }),
+    },
+  };
 }
 
-async function deleteObject({ objectId }) {
-  const response = await fetch(SERVER_URL + `/delete?objectId=${objectId}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-
-  if (response.ok) return response.json();
-  else {
-    const errorData = await response.json();
-    throw new Error(errorData.message);
-  }
+function deleteObject({ objectId }) {
+  return {
+    url: SERVER_URL + `/delete?objectId=${objectId}`,
+    options: {
+      method: "DELETE",
+      credentials: "include",
+    },
+  };
 }
 
-async function moveObject({ itemId, toDirId }) {
+function moveObject({ itemId, toDirId }) {
   toDirId = toDirId == "root" ? "" : toDirId;
 
-  const response = await fetch(SERVER_URL + "/move", {
-    method: "PATCH",
-    credentials: "include",
-    body: JSON.stringify({
-      itemId,
-      toDirId,
-    }),
-  });
-
-  if (response.ok) return response.json();
-  else {
-    const errorData = await response.json();
-    throw new Error(errorData.message);
-  }
+  return {
+    url: SERVER_URL + "/move",
+    options: {
+      method: "PATCH",
+      credentials: "include",
+      body: JSON.stringify({
+        itemId,
+        toDirId,
+      }),
+    },
+  };
 }
 
 export async function downloadObject(id) {
@@ -111,28 +91,30 @@ export async function downloadObject(id) {
   URL.revokeObjectURL(link.href);
 }
 
-async function getDirIdByPath(path) {
-  const response = await fetch(SERVER_URL + `/folder/id-by-path?path=${path}`, {
-    credentials: "include",
-  });
-
-  if (response.ok) {
-    const data = await response.json();
-    return data.dirId;
-  } else {
-    const errorData = await response.json();
-    throw new Error(errorData.message);
-  }
+function getDirIdByPath(path) {
+  return {
+    url: SERVER_URL + `/folder/id-by-path?path=${path}`,
+    options: {
+      credentials: "include",
+    },
+  };
 }
 
 export function useDirIdByPath() {
   const queryClient = useQueryClient();
+  const apiFetch = useApi();
+
+  const getDirId = async path => {
+    const { dirId } = await apiFetch(getDirIdByPath(path));
+    return dirId;
+  };
 
   return async path => {
     const data = await queryClient.fetchQuery({
       queryKey: ["idByPath", path],
-      queryFn: () => getDirIdByPath(path),
+      queryFn: () => getDirId(path),
       staleTime: Infinity,
+      gcTime: Infinity,
     });
 
     return data;
@@ -172,23 +154,28 @@ function useDeleteCacheDirPath() {
 export const useFolderContent = (dirId = null) => {
   if (!isNaN(dirId)) dirId = Number.parseInt(dirId);
   const cacheDirPath = useCacheDirPath();
+  const apiFetch = useApi();
+
+  const queryFn = async () => {
+    const data = await apiFetch(getFolderContent(dirId));
+    cacheDirPath(data.path, dirId);
+    return data;
+  };
 
   return useQuery({
     queryKey: ["dir", dirId],
-    queryFn: async () => {
-      const data = await getFolderContent(dirId);
-      cacheDirPath(data.path, dirId);
-      return data;
-    },
+    queryFn,
     refetchOnWindowFocus: false,
   });
 };
 
 export const useRenameObject = () => {
   const deleteDirPathCache = useDeleteCacheDirPath();
+  const apiFetch = useApi();
+  const mutationFn = args => apiFetch(renameObject(args));
 
   return useMutation({
-    mutationFn: renameObject,
+    mutationFn,
     onSuccess: (_, { objectId }) => {
       deleteDirPathCache(objectId);
     },
@@ -203,17 +190,22 @@ export const useRefreshFolderContent = dirId => {
 };
 
 export const useCreateFolder = () => {
+  const apiFetch = useApi();
+  const mutationFn = args => apiFetch(createFolder(args));
+
   return useMutation({
-    mutationFn: createFolder,
+    mutationFn,
   });
 };
 
 export const useDeleteObject = () => {
   const queryClient = useQueryClient();
   const deleteDirPathCache = useDeleteCacheDirPath();
+  const apiFetch = useApi();
+  const mutationFn = args => apiFetch(deleteObject(args));
 
   return useMutation({
-    mutationFn: deleteObject,
+    mutationFn,
     onSuccess: (_, { objectId }) => {
       deleteDirPathCache(objectId);
       queryClient.removeQueries({ queryKey: ["dir", objectId] });
@@ -223,9 +215,11 @@ export const useDeleteObject = () => {
 
 export const useMoveFolder = () => {
   const deleteDirPathCache = useDeleteCacheDirPath();
+  const apiFetch = useApi();
+  const mutationFn = args => apiFetch(moveObject(args));
 
   return useMutation({
-    mutationFn: moveObject,
+    mutationFn,
     onSuccess: (_, { itemId }) => {
       deleteDirPathCache(itemId);
     },
