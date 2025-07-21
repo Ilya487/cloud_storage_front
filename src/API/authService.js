@@ -55,6 +55,7 @@ export const useGetUser = () => {
     queryFn,
     staleTime: Infinity,
     gcTime: Infinity,
+    retry: false,
   });
 };
 
@@ -67,6 +68,12 @@ export const useSignin = () => {
   });
 };
 
-export const useLogOut = () => useMutation({ mutationFn: logOut });
+export const useLogOut = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: logOut,
+    onSuccess: () => queryClient.setQueryData(["authUser"], { auth: false }),
+  });
+};
 
 export const useSignUp = () => useMutation({ mutationFn: signupUser });
