@@ -1,16 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SERVER_URL } from "./config";
+import useApi from "./useApi";
 
-async function checkAuth() {
-  const response = await fetch(SERVER_URL + "/check-auth", {
+const getAuthUser = () => ({
+  url: SERVER_URL + "/auth/user",
+  options: {
     credentials: "include",
-  });
-
-  return response.json();
-}
+  },
+});
 
 async function signinUser({ login, password }) {
-  const response = await fetch(SERVER_URL + "/signin", {
+  const response = await fetch(SERVER_URL + "/auth/signin", {
     method: "POST",
     credentials: "include",
     body: JSON.stringify({ login, password }),
@@ -24,7 +24,7 @@ async function signinUser({ login, password }) {
 }
 
 async function logOut() {
-  const response = await fetch(SERVER_URL + "/logout", {
+  const response = await fetch(SERVER_URL + "/auth/logout", {
     credentials: "include",
     method: "POST",
   });
@@ -33,7 +33,7 @@ async function logOut() {
 }
 
 async function signupUser({ login, password }) {
-  const response = await fetch(SERVER_URL + "/signup", {
+  const response = await fetch(SERVER_URL + "/auth/signup", {
     method: "POST",
     credentials: "include",
     body: JSON.stringify({ login, password }),
@@ -46,12 +46,18 @@ async function signupUser({ login, password }) {
   }
 }
 
-export const useAuth = () =>
-  useQuery({
-    queryKey: ["auth"],
-    queryFn: checkAuth,
-    staleTime: 1000 * 60 * 25,
+export const useGetUser = () => {
+  const apiFetch = useApi();
+  const queryFn = () => apiFetch(getAuthUser());
+
+  return useQuery({
+    queryKey: ["authUser"],
+    queryFn,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
   });
+};
 
 export const useSignin = () => {
   const queryClient = useQueryClient();
@@ -62,6 +68,12 @@ export const useSignin = () => {
   });
 };
 
-export const useLogOut = () => useMutation({ mutationFn: logOut });
+export const useLogOut = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: logOut,
+    onSuccess: () => queryClient.setQueryData(["authUser"], { auth: false }),
+  });
+};
 
 export const useSignUp = () => useMutation({ mutationFn: signupUser });
