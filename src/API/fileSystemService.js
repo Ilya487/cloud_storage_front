@@ -47,13 +47,16 @@ function deleteObject({ objectId }) {
   return {
     url: SERVER_URL + `/delete?objectId=${objectId}`,
     options: {
-      method: "DELETE",
+      method: "POST",
       credentials: "include",
+      body: JSON.stringify({
+        items: [objectId],
+      }),
     },
   };
 }
 
-function moveObject({ itemId, toDirId }) {
+function moveObject({ items, toDirId }) {
   toDirId = toDirId == "root" ? "" : toDirId;
 
   return {
@@ -62,15 +65,19 @@ function moveObject({ itemId, toDirId }) {
       method: "PATCH",
       credentials: "include",
       body: JSON.stringify({
-        itemId,
+        items,
         toDirId,
       }),
     },
   };
 }
 
-export async function downloadObject(id) {
-  const response = await fetch(SERVER_URL + `/download?fileId=${id}`, { credentials: "include" });
+export async function downloadObject(items) {
+  const params = new URLSearchParams();
+  items.forEach(item => params.append("items[]", item));
+  const response = await fetch(SERVER_URL + `/download?${params.toString()}`, {
+    credentials: "include",
+  });
 
   if (!response.ok) {
     const errorData = await response.json();
