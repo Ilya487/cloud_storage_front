@@ -34,7 +34,7 @@ const CatalogFilter = ({ filterSetup, setFilterSetup }) => {
   }
 
   return (
-    <li className={styles["catalog-headers"]}>
+    <div className={styles["catalog-headers"]}>
       <div className={styles["filter-item"]}>
         <button onClick={() => setFilter("name")} className={styles["filter-btn"]}>
           Название
@@ -62,7 +62,7 @@ const CatalogFilter = ({ filterSetup, setFilterSetup }) => {
           className={clsx(styles.arrow, filterSetup.ascending && styles["arrow--up"])}
         />
       </div>
-    </li>
+    </div>
   );
 };
 

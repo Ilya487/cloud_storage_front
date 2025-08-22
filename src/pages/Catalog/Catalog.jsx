@@ -1,6 +1,5 @@
 import { useParams } from "react-router";
 import { useFolderContent, useRefreshFolderContent } from "../../API/fileSystemService";
-import CatalogItem from "../../Components/CatalogItem/CatalogItem";
 import useContextMenu from "../../hooks/useContextMenu";
 import CatalogContextMenu from "../../Components/CatalogContextMenu/CatalogContextMenu";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
@@ -11,6 +10,7 @@ import PathNavigator from "../../Components/PathNavigator/PathNavigator";
 import useFilteredCatalog from "./useFilteredCatalog";
 import CatalogFilter from "../../Components/CatalogFilter/CatalogFilter";
 import useFileDrop from "../../hooks/useFileDrop";
+import CatalogItems from "../../Components/CatalogItems/CatalogItems";
 
 const Catalog = () => {
   const { dirId } = useParams();
@@ -41,14 +41,8 @@ const Catalog = () => {
         onDragOver={handleOver}
       >
         <PathNavigator path={data.path} />
-        {data.contents.length > 0 && (
-          <ul className={styles["catalog-items"]}>
-            <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
-            {filteredCatalog?.map(item => (
-              <CatalogItem key={item.id} catalogItem={item} />
-            ))}
-          </ul>
-        )}
+        <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
+        {filteredCatalog?.length > 0 && <CatalogItems items={filteredCatalog} dirId={dirId} />}
 
         {data.contents.length == 0 && <p className={styles["empty-dir"]}>{"Эта папка пуста."}</p>}
       </section>
