@@ -6,6 +6,7 @@ import { useRefreshFolderContent } from "../../API/fileSystemService";
 import useContextMenu from "../../hooks/useContextMenu";
 import ItemContextMenu from "../ItemContextMenu/ItemContextMenu";
 import clsx from "clsx";
+import fileSizeDisplay from "../../utils/fileSizeDisplay";
 
 const CatalogItem = ({ catalogItem }) => {
   const { id, name, type, created_at, size } = catalogItem;
@@ -21,24 +22,6 @@ const CatalogItem = ({ catalogItem }) => {
     const updatedPath = currentPath.replace(dirId, id);
 
     navigator(updatedPath);
-  }
-
-  function fileSizeDisplay(size) {
-    if (size < 1000) {
-      return size + " байт";
-    }
-    size = size / 1024;
-    if (size < 1000) {
-      return size.toFixed(1) + " КБ";
-    }
-    size = size / 1024;
-    if (size < 1000) {
-      return size.toFixed(1) + " МБ";
-    }
-    size = size / 1024;
-    if (size < 1000) {
-      return size.toFixed(1) + " ГБ";
-    }
   }
 
   const folderRef = useOutsideHandle(["click", "contextmenu"], () => closeMenu());
