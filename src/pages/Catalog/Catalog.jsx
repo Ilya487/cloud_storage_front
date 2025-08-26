@@ -41,7 +41,9 @@ const Catalog = () => {
         onDragOver={handleOver}
       >
         <PathNavigator path={data.path} />
-        <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
+        {filteredCatalog?.length > 0 && (
+          <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
+        )}
         {filteredCatalog?.length > 0 && <CatalogItems items={filteredCatalog} dirId={dirId} />}
 
         {data.contents.length == 0 && <p className={styles["empty-dir"]}>{"Эта папка пуста."}</p>}

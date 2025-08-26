@@ -1,4 +1,3 @@
-import { useState } from "react";
 import ContextMenu from "./ContextMenu";
 import RenameDialog from "../RenameDialog/RenameDialog";
 import DeleteDialog from "../DeleteDialog/DeleteDialog";
@@ -6,6 +5,7 @@ import MoveDialog from "../MoveDialog/MoveDialog";
 import { downloadObject } from "../../API/fileSystemService";
 import { toast } from "react-toastify";
 import { createPortal } from "react-dom";
+import useMenuActions from "./useMenuActions";
 
 const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMenuVisible }) => {
   const updatedOnClose = () => {
@@ -13,24 +13,11 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
     onClose && onClose();
   };
 
-  const [optionsVisible, setOptionsVisible] = useState({
+  const { handleOptionClick, disableActiveOptions, optionsVisible } = useMenuActions({
     rename: false,
     delete: false,
     move: false,
   });
-
-  function handleOptionClick(option, value) {
-    setOptionsVisible({ ...optionsVisible, [option]: value });
-  }
-
-  function disableActiveOptions() {
-    const updatedState = { ...optionsVisible };
-    for (const option in updatedState) {
-      updatedState[option] = false;
-    }
-
-    setOptionsVisible(updatedState);
-  }
 
   async function download(id) {
     toast.promise(
