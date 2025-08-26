@@ -34,7 +34,7 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
 
   async function download(id) {
     toast.promise(
-      downloadObject(id),
+      downloadObject([id]),
       {
         pending: `Подготовка к загрузке "${item.name}"`,
         error: `Не удалось загрузить "${item.name}"`,

@@ -55,7 +55,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   function moveItem() {
     if (!selectedDirId) return;
     mutation.mutate(
-      { itemId, toDirId: selectedDirId },
+      { items: [itemId], toDirId: selectedDirId },
       {
         onSuccess: () => {
           handleClose();
