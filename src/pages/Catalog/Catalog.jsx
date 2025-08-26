@@ -1,7 +1,7 @@
 import { useParams } from "react-router";
 import { useFolderContent, useRefreshFolderContent } from "../../API/fileSystemService";
 import useContextMenu from "../../hooks/useContextMenu";
-import CatalogContextMenu from "../../Components/CatalogContextMenu/CatalogContextMenu";
+import CatalogContextMenu from "../../Components/ContextMenu/CatalogContextMenu";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import styles from "./Catalog.module.css";
 import clsx from "clsx";

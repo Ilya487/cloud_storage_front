@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ContextMenu from "../ContextMenu/ContextMenu";
+import ContextMenu from "./ContextMenu";
 import RenameDialog from "../RenameDialog/RenameDialog";
 import DeleteDialog from "../DeleteDialog/DeleteDialog";
 import MoveDialog from "../MoveDialog/MoveDialog";

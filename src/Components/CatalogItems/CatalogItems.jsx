@@ -3,7 +3,7 @@ import useContextMenu from "../../hooks/useContextMenu";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CatalogItem from "../CatalogItem/CatalogItem";
 import { useRefreshFolderContent } from "../../API/fileSystemService";
-import ItemContextMenu from "../ItemContextMenu/ItemContextMenu";
+import ItemContextMenu from "../ContextMenu/ItemContextMenu";
 
 const CatalogItems = ({ items, dirId }) => {
   const [selectedItems, setSelectedItems] = useState([]);
