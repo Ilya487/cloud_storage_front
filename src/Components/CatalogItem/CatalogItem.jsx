@@ -1,11 +1,10 @@
 import { useNavigate, useParams } from "react-router";
 import styles from "./CatalogItem.module.css";
 import { FaFile, FaFolder } from "react-icons/fa";
-import useOutsideHandle from "../../hooks/useOutsideHandle";
 import clsx from "clsx";
 import fileSizeDisplay from "../../utils/fileSizeDisplay";
 
-const CatalogItem = ({ catalogItem, handleContextMenu, closeMenu, isSelected }) => {
+const CatalogItem = ({ catalogItem, handleContextMenu, isSelected, clickHandle }) => {
   const { id, name, type, created_at, size } = catalogItem;
   const { dirId } = useParams();
   const navigator = useNavigate();
@@ -19,15 +18,12 @@ const CatalogItem = ({ catalogItem, handleContextMenu, closeMenu, isSelected }) 
     navigator(updatedPath);
   }
 
-  const folderRef = useOutsideHandle(["click"], () => closeMenu());
-
   return (
     <li
       onDoubleClick={openFolder}
       className={clsx(styles["catalog-item"], isSelected && styles["catalog-item--selected"])}
       onContextMenu={handleContextMenu}
-      ref={folderRef}
-      onClick={() => closeMenu()}
+      onClick={e => clickHandle(e, catalogItem.id)}
     >
       <div className={styles.filename} title={name}>
         {type == "folder" ? (
