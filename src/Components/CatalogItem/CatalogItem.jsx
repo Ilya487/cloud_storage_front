@@ -23,7 +23,7 @@ const CatalogItem = ({ catalogItem, handleContextMenu, isSelected, clickHandle }
       onDoubleClick={openFolder}
       className={clsx(styles["catalog-item"], isSelected && styles["catalog-item--selected"])}
       onContextMenu={handleContextMenu}
-      onClick={e => clickHandle(e, catalogItem.id)}
+      onClick={e => clickHandle(e, catalogItem)}
     >
       <div className={styles.filename} title={name}>
         {type == "folder" ? (
