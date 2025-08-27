@@ -19,12 +19,23 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
     move: false,
   });
 
-  async function download(id) {
+  async function download() {
+    const dowloadIds = items.map(item => item.id);
+    const toastText = { pending: "", error: "" };
+
+    if (items.length > 1) {
+      toastText.pending = `Подготовка к загрузке (${items.length}) объектов`;
+      toastText.error = `Не удалось загрузить запрашиваемые объкты`;
+    } else {
+      toastText.pending = `Подготовка к загрузке "${items[0].name}"`;
+      toastText.error = `Не удалось загрузить "${items[0].name}"`;
+    }
+
     toast.promise(
-      downloadObject([id]),
+      downloadObject(dowloadIds),
       {
-        pending: `Подготовка к загрузке "${item.name}"`,
-        error: `Не удалось загрузить "${item.name}"`,
+        pending: toastText.pending,
+        error: toastText.error,
       },
       {
         position: "top-center",
@@ -37,10 +48,12 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
       {contextMenuVisible &&
         createPortal(
           <ContextMenu coords={coords}>
-            <li className="context-menu__item" onClick={() => handleOptionClick("rename", true)}>
-              Переименовать
-            </li>
-            <li className="context-menu__item" onClick={() => download(item.id)}>
+            {items.length == 1 && (
+              <li className="context-menu__item" onClick={() => handleOptionClick("rename", true)}>
+                Переименовать
+              </li>
+            )}
+            <li className="context-menu__item" onClick={() => download()}>
               Скачать
             </li>
             <li className="context-menu__item" onClick={() => handleOptionClick("move", true)}>
@@ -55,9 +68,9 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
 
       {optionsVisible.rename && (
         <RenameDialog
-          type={item.type}
-          objectId={item.id}
-          defaultName={item.name}
+          type={items[0].type}
+          objectId={items[0].id}
+          defaultName={items[0].name}
           onRename={onRename}
           onClose={updatedOnClose}
         />
