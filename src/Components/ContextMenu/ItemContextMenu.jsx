@@ -63,12 +63,7 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
         />
       )}
       {optionsVisible.delete && (
-        <DeleteDialog
-          name={item.name}
-          objectId={item.id}
-          onClose={updatedOnClose}
-          onDelete={onDelete}
-        />
+        <DeleteDialog items={items} onClose={updatedOnClose} onDelete={onDelete} />
       )}
       {optionsVisible.move && (
         <MoveDialog

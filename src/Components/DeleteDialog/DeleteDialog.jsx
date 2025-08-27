@@ -5,7 +5,7 @@ import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
 import useErrorToast from "../../hooks/useErrorToast";
 
-const DeleteDialog = ({ objectId, name, onDelete, onClose }) => {
+const DeleteDialog = ({ items, onDelete, onClose }) => {
   const mutation = useDeleteObject();
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
   const showErrorToast = useErrorToast();
@@ -16,9 +16,9 @@ const DeleteDialog = ({ objectId, name, onDelete, onClose }) => {
 
   function submitDelete(e) {
     e.preventDefault();
-
+    const ids = items.map(item => item.id);
     mutation.mutate(
-      { objectId },
+      { items: ids },
       {
         onSuccess: () => {
           handleClose();
@@ -35,7 +35,12 @@ const DeleteDialog = ({ objectId, name, onDelete, onClose }) => {
         <p className={styles.title}>Удалить навсегда?</p>
         <CancelBtn onClick={handleClose} />
       </div>
-      <p className={styles["delete-msg"]}>Объект "{name}" будет удален навсегда.</p>
+      {items.length == 1 && (
+        <p className={styles["delete-msg"]}>Объект "{items[0].name}" будет удален навсегда.</p>
+      )}
+      {items.length > 1 && (
+        <p className={styles["delete-msg"]}>Объекты ({items.length}) будут удалены навсегда.</p>
+      )}
       <form onSubmit={submitDelete}>
         <div className={styles["buttons-block"]}>
           <button

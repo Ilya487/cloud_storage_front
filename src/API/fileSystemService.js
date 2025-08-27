@@ -43,14 +43,14 @@ function createFolder({ name, parentDirId }) {
   };
 }
 
-function deleteObject({ objectId }) {
+function deleteObject({ items }) {
   return {
-    url: SERVER_URL + `/delete?objectId=${objectId}`,
+    url: SERVER_URL + `/delete`,
     options: {
       method: "POST",
       credentials: "include",
       body: JSON.stringify({
-        items: [objectId],
+        items: items,
       }),
     },
   };
