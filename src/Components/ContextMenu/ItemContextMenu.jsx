@@ -7,7 +7,15 @@ import { toast } from "react-toastify";
 import { createPortal } from "react-dom";
 import useMenuActions from "./useMenuActions";
 
-const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMenuVisible }) => {
+const ItemContextMenu = ({
+  items,
+  itemsCurrentPath,
+  onRename,
+  onDelete,
+  onClose,
+  coords,
+  contextMenuVisible,
+}) => {
   const updatedOnClose = () => {
     disableActiveOptions();
     onClose && onClose();
@@ -79,12 +87,7 @@ const ItemContextMenu = ({ item, onRename, onDelete, onClose, coords, contextMen
         <DeleteDialog items={items} onClose={updatedOnClose} onDelete={onDelete} />
       )}
       {optionsVisible.move && (
-        <MoveDialog
-          onClose={updatedOnClose}
-          itemName={item.name}
-          itemId={item.id}
-          itemPath={item.path}
-        />
+        <MoveDialog items={items} itemsCurrentPath={itemsCurrentPath} onClose={updatedOnClose} />
       )}
     </>
   );

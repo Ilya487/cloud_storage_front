@@ -12,7 +12,7 @@ import CancelBtn from "../CancelBtn/CancelBtn";
 import Spinner from "../Spinner/Spinner";
 import useErrorToast from "../../hooks/useErrorToast";
 
-const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
+const MoveDialog = ({ items, itemsCurrentPath, onClose }) => {
   const modalWindowRef = useOutsideHandle(["click"], handleClose, true);
   const pathMap = useRef([]);
   const [currentDirId, setCurrentDirId] = useState("root");
@@ -21,7 +21,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
     if (!data) return;
     const filteredContent = data.contents.filter(object => {
       if (object.type == "file") return false;
-      if (object.id == itemId) return false;
+      if (items.some(item => item.id == object.id)) return false;
       return true;
     });
 
@@ -45,7 +45,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   function goBack() {
     const prevDirId = pathMap.current.pop();
     setCurrentDirId(prevDirId);
-    setSelectedDirId(null);
+    setSelectedDirId(prevDirId);
   }
 
   function selectDir(id) {
@@ -55,7 +55,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   function moveItem() {
     if (!selectedDirId) return;
     mutation.mutate(
-      { items: [itemId], toDirId: selectedDirId },
+      { items: items.map(item => item.id), toDirId: selectedDirId },
       {
         onSuccess: () => {
           handleClose();
@@ -69,12 +69,13 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
   return (
     <ModalWindow className={styles["modal-window"]} ref={modalWindowRef} closeCb={handleClose}>
       <div className={styles["top-block"]}>
-        <p className={styles.title}>Перемещение объекта "{itemName}"</p>
+        {items.length == 1 && <p className={styles.title}>Перемещение объекта "{items[0].name}"</p>}
+        {items.length > 1 && <p className={styles.title}>Перемещение ({items.length}) объектов</p>}
         <CancelBtn onClick={handleClose} />
       </div>
       <div className={styles["main-body"]}>
         <BackButton onBack={goBack} canGoBack={pathMap.current.length != 0} />
-        <ItemCurrentPath path={itemPath} />
+        <ItemCurrentPath path={itemsCurrentPath} />
         {isPending && <Spinner className={styles.loader} />}
         {data && data.contents.length == 0 && (
           <p className={styles["empty-dir"]}>Здесь ничего нет...</p>
@@ -85,7 +86,7 @@ const MoveDialog = ({ itemId, itemPath, itemName, onClose }) => {
             onMoveInDir={goInDir}
             onSelect={selectDir}
             selectedDirId={selectedDirId}
-            showMoveToRoot={currentDirId == "root" && itemPath.match(/\//g).length > 1}
+            showMoveToRoot={currentDirId == "root" && itemsCurrentPath != "/"}
           />
         )}
         {data && <Path path={data.path} />}

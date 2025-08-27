@@ -5,7 +5,7 @@ import CatalogItem from "../CatalogItem/CatalogItem";
 import { useRefreshFolderContent } from "../../API/fileSystemService";
 import ItemContextMenu from "../ContextMenu/ItemContextMenu";
 
-const CatalogItems = ({ items, dirId }) => {
+const CatalogItems = ({ items, dirId, path }) => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [visualSelectedItems, setVisualSelectedItems] = useState([]);
   const refreshFolder = useRefreshFolderContent(dirId);
@@ -74,8 +74,9 @@ const CatalogItems = ({ items, dirId }) => {
       <ItemContextMenu
         coords={position}
         items={selectedItems}
-        onRename={() => refreshFolder(dirId)}
-        onDelete={() => refreshFolder(dirId)}
+        itemsCurrentPath={path}
+        onRename={() => refreshFolder()}
+        onDelete={() => refreshFolder()}
         contextMenuVisible={isMenuOpen}
       />
     </>
