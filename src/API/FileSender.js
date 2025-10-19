@@ -7,6 +7,7 @@ export class FileSender {
   static STATUS_PREPARING = "preparing";
   static STATUS_COMPLETE = "complete";
   static STATUS_CANCELING = "canceling";
+  static STATUS_BUILDING = "building";
   #status = FileSender.STATUS_NOT_RUNNING;
   #file;
   #destinationDirId;
@@ -55,7 +56,8 @@ export class FileSender {
   }
 
   async cancelSending() {
-    if (this.#status !== FileSender.STATUS_SENDING) return;
+    if (this.#status !== FileSender.STATUS_SENDING && this.#status !== FileSender.STATUS_BUILDING)
+      return;
     this.#updateStatus(FileSender.STATUS_CANCELING);
     for (let xhr of this.#xhrMap.keys()) {
       xhr.abort();
@@ -108,8 +110,7 @@ export class FileSender {
           const result = JSON.parse(xhr.response);
           this.onChunkLoad && this.onChunkLoad(result);
           if (result["progress"] == 100) {
-            this.#updateStatus(FileSender.STATUS_COMPLETE);
-            this.onFileLoad && this.onFileLoad(result);
+            this.#sendFinalizeRequest();
           }
           resolve();
         } else reject();
@@ -173,6 +174,32 @@ export class FileSender {
       this.onError && this.onError("Ошибка отмены запроса");
       throw new Error();
     }
+  }
+
+  async #sendFinalizeRequest() {
+    this.#updateStatus(FileSender.STATUS_BUILDING);
+
+    const controller = new AbortController();
+    this.#xhrMap.set(controller, controller);
+    const response = await fetch(this.serverUrl + "/upload/finalize", {
+      credentials: "include",
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: this.#sessionId,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      this.#updateStatus(FileSender.STATUS_CANCEL);
+      this.onError && this.onError("Не удалось собрать файл");
+      throw new Error();
+    }
+
+    const data = await response.json();
+
+    this.#updateStatus(FileSender.STATUS_COMPLETE);
+    this.onFileLoad && this.onFileLoad(data);
   }
 
   #updateStatus(status) {
