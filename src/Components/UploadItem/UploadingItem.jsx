@@ -39,6 +39,19 @@ const UploadingItem = ({ session }) => {
     );
   }
 
+  if (session.status == FileSender.STATUS_BUILDING) {
+    return (
+      <li className={styles["upload-item"]}>
+        <div className={styles.top}>
+          <p>{session.file.name}</p>
+          <CancelBtn onClick={session.cancelUpload} />
+        </div>
+        <span className={styles.status}>Обработка файла</span>
+        <div className={clsx(styles["loading-bar"], styles["preparing-bar"])} />
+      </li>
+    );
+  }
+
   if (session.status == FileSender.STATUS_COMPLETE) {
     return (
       <li className={styles["upload-item"]}>

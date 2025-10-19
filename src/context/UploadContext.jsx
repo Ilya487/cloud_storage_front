@@ -48,6 +48,8 @@ export const UploadProvider = ({ children }) => {
         });
       } else if (status == FileSender.STATUS_CANCEL && !sessionId) {
         updatePreparingSessionStatus(generatedKey, status);
+      } else if (status == FileSender.STATUS_BUILDING) {
+        updateSessionStatus(sessionId, status);
       } else {
         deletePreparingSession(generatedKey);
         updateSessionStatus(sessionId, status);
@@ -70,7 +72,6 @@ export const UploadProvider = ({ children }) => {
       path: fileSender.getPath(),
       destinationDirId,
       cancelUpload: async () => {
-        if (fileSender.getStatus() !== FileSender.STATUS_SENDING) return;
         await fileSender.cancelSending();
         cancelActiveSession(sessionId, "Отменен");
       },
