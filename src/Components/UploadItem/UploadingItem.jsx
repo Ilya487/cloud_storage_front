@@ -44,7 +44,6 @@ const UploadingItem = ({ session }) => {
       <li className={styles["upload-item"]}>
         <div className={styles.top}>
           <p>{session.file.name}</p>
-          <CancelBtn onClick={session.cancelUpload} />
         </div>
         <span className={styles.status}>Обработка файла</span>
         <div className={clsx(styles["loading-bar"], styles["preparing-bar"])} />

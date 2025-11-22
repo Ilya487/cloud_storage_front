@@ -110,7 +110,7 @@ export class FileSender {
           const result = JSON.parse(xhr.response);
           this.onChunkLoad && this.onChunkLoad(result);
           if (result["progress"] == 100) {
-            this.#sendFinalizeRequest();
+            this.#startBuild();
           }
           resolve();
         } else reject();
@@ -132,8 +132,7 @@ export class FileSender {
         });
     } else {
       this.cancelSending();
-      this.onError && this.onError("Ошибка загрузки файла");
-      throw new Error();
+      this.#handleError("Ошибка загрузки файла");
     }
   }
 
@@ -152,8 +151,8 @@ export class FileSender {
 
     if (!response.ok) {
       this.#updateStatus(FileSender.STATUS_CANCEL);
-      this.onError && this.onError(data.message);
-      throw new Error();
+
+      this.#handleError(data.message);
     }
 
     return {
@@ -171,35 +170,73 @@ export class FileSender {
     });
 
     if (!response.ok) {
-      this.onError && this.onError("Ошибка отмены запроса");
-      throw new Error();
+      this.#handleError("Ошибка отмены запроса");
     }
   }
 
-  async #sendFinalizeRequest() {
+  async #startBuild() {
     this.#updateStatus(FileSender.STATUS_BUILDING);
 
-    const controller = new AbortController();
-    this.#xhrMap.set(controller, controller);
-    const response = await fetch(this.serverUrl + "/upload/finalize", {
+    const response = await fetch(this.serverUrl + "/upload/startBuild", {
       credentials: "include",
       method: "POST",
       body: JSON.stringify({
         sessionId: this.#sessionId,
       }),
-      signal: controller.signal,
     });
 
     if (!response.ok) {
       this.#updateStatus(FileSender.STATUS_CANCEL);
-      this.onError && this.onError("Не удалось собрать файл");
-      throw new Error();
+      this.#handleError("Не удалось собрать файл");
+    }
+
+    this.#startPolling();
+  }
+
+  #startPolling() {
+    const interval = this.#getPollingInterval();
+
+    const intervalId = setInterval(async () => {
+      const status = await this.#checkFileBuildingStatus();
+
+      if (status == "error") {
+        clearInterval(intervalId);
+        this.#handleError("Не удалось собрать файл");
+      }
+      if (status == "complete") {
+        clearInterval(intervalId);
+        this.#updateStatus(FileSender.STATUS_COMPLETE);
+        this.onFileLoad && this.onFileLoad();
+      }
+    }, interval);
+  }
+
+  async #checkFileBuildingStatus() {
+    const response = await fetch(this.serverUrl + `/upload/status?sessionId=${this.#sessionId}`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      this.#handleError("Не удалось собрать файл");
     }
 
     const data = await response.json();
+    return data.status;
+  }
 
-    this.#updateStatus(FileSender.STATUS_COMPLETE);
-    this.onFileLoad && this.onFileLoad(data);
+  #getPollingInterval() {
+    if (this.#file.size < 500 * 1024 * 1024) {
+      return 1 * 1000;
+    } else if (this.#file.size < 2 * 1024 * 1024 * 1024) {
+      return 4 * 1000;
+    } else {
+      return 7 * 1000;
+    }
+  }
+
+  #handleError(data) {
+    this.onError && this.onError(data);
+    throw new Error();
   }
 
   #updateStatus(status) {
