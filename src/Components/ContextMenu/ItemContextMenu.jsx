@@ -2,10 +2,10 @@ import ContextMenu from "./ContextMenu";
 import RenameDialog from "../RenameDialog/RenameDialog";
 import DeleteDialog from "../DeleteDialog/DeleteDialog";
 import MoveDialog from "../MoveDialog/MoveDialog";
-import { downloadObject } from "../../API/fileSystemService";
 import { toast } from "react-toastify";
 import { createPortal } from "react-dom";
 import useMenuActions from "./useMenuActions";
+import { downloadDirOrMany, downloadFile } from "../../API/downloadService";
 
 const ItemContextMenu = ({
   items,
@@ -28,26 +28,27 @@ const ItemContextMenu = ({
   });
 
   async function download() {
-    const dowloadIds = items.map(item => item.id);
-    const toastText = { pending: "", error: "" };
-
-    if (items.length > 1) {
-      toastText.pending = `Подготовка к загрузке (${items.length}) объектов`;
-      toastText.error = `Не удалось загрузить запрашиваемые объкты`;
-    } else {
-      toastText.pending = `Подготовка к загрузке "${items[0].name}"`;
-      toastText.error = `Не удалось загрузить "${items[0].name}"`;
+    if (items.length == 1 && items[0].type == "file") {
+      downloadFile(items[0].id);
+      return;
     }
 
+    const dowloadIds = items.map(item => item.id);
+    const pendingMessage = "Подготовка архива";
+
     toast.promise(
-      downloadObject(dowloadIds),
+      downloadDirOrMany(dowloadIds),
       {
-        pending: toastText.pending,
-        error: toastText.error,
+        pending: pendingMessage,
+        error: {
+          render({ data }) {
+            return data.message;
+          },
+        },
       },
       {
         position: "top-center",
-      }
+      },
     );
   }
 
@@ -71,7 +72,7 @@ const ItemContextMenu = ({
               Удалить
             </li>
           </ContextMenu>,
-          document.body
+          document.body,
         )}
 
       {optionsVisible.rename && (

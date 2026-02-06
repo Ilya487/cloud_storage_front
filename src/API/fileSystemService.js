@@ -72,32 +72,6 @@ function moveObject({ items, toDirId }) {
   };
 }
 
-export async function downloadObject(items) {
-  const params = new URLSearchParams();
-  items.forEach(item => params.append("items[]", item));
-  const response = await fetch(SERVER_URL + `/download?${params.toString()}`, {
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-
-    throw new Error(errorData.message);
-  }
-
-  const blob = await response.blob();
-  const contentDisposition = response.headers.get("Content-Disposition");
-  const filename = decodeURI(contentDisposition.match(/filename=(.+)/)[1]);
-
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(link.href);
-}
-
 function getDirIdByPath(path) {
   return {
     url: SERVER_URL + `/folder/id-by-path?path=${path}`,
