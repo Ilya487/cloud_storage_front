@@ -81,6 +81,15 @@ function getDirIdByPath(path) {
   };
 }
 
+function search(query) {
+  return {
+    url: SERVER_URL + `/search?query=${query}`,
+    options: {
+      credentials: "include",
+    },
+  };
+}
+
 export function useDirIdByPath() {
   const queryClient = useQueryClient();
   const apiFetch = useApi();
@@ -204,5 +213,19 @@ export const useMoveFolder = () => {
     onSuccess: (_, { itemId }) => {
       deleteDirPathCache(itemId);
     },
+  });
+};
+
+export const useSearchFs = query => {
+  const apiFetch = useApi();
+
+  const queryFn = async () => {
+    const data = await apiFetch(search(query));
+    return data;
+  };
+
+  return useQuery({
+    queryKey: ["search", query],
+    queryFn,
   });
 };
