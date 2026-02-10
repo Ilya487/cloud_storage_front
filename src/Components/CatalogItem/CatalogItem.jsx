@@ -1,8 +1,9 @@
 import { useNavigate, useParams } from "react-router";
 import styles from "./CatalogItem.module.css";
-import { FaFile, FaFolder } from "react-icons/fa";
 import clsx from "clsx";
 import fileSizeDisplay from "../../utils/fileSizeDisplay";
+import FolderIcon from "../Icons/FolderIcon";
+import FileIcon from "../Icons/FileIcon";
 
 const CatalogItem = ({ catalogItem, handleContextMenu, isSelected, clickHandle }) => {
   const { id, name, type, created_at, size } = catalogItem;
@@ -27,9 +28,9 @@ const CatalogItem = ({ catalogItem, handleContextMenu, isSelected, clickHandle }
     >
       <div className={styles.filename} title={name}>
         {type == "folder" ? (
-          <FaFolder color="#3030e7" className={styles.icon} />
+          <FolderIcon className={styles.icon} />
         ) : (
-          <FaFile color="#3030e7" className={styles.icon} />
+          <FileIcon className={styles.icon} />
         )}
         <span>{name}</span>
       </div>
