@@ -218,14 +218,20 @@ export const useMoveFolder = () => {
 
 export const useSearchFs = query => {
   const apiFetch = useApi();
+  const queryClient = useQueryClient();
 
-  const queryFn = async () => {
-    const data = await apiFetch(search(query));
+  const queryFn = async ({ signal }) => {
+    await queryClient.cancelQueries({ queryKey: ["search"], exact: true }, { silent: true });
+    const requestOptions = search(query);
+    requestOptions.options.signal = signal;
+
+    const data = await apiFetch(requestOptions);
     return data;
   };
 
   return useQuery({
     queryKey: ["search", query],
     queryFn,
+    refetchOnWindowFocus: false,
   });
 };
