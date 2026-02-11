@@ -14,7 +14,7 @@ const ModalWindow = forwardRef(function ModalWindow({ children, closeCb, ...args
   return (
     <>
       <div className={"z-20 " + styles.overlay}></div>
-      <div className={`${styles["modal-container"]} ${args.className || ""}`} ref={ref}>
+      <div className={`z-30 ${styles["modal-container"]} ${args.className || ""}`} ref={ref}>
         {children}
       </div>
     </>
