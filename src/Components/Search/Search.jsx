@@ -4,9 +4,12 @@ import { useSearchFs } from "../../API/fileSystemService";
 import Spinner from "../Spinner/Spinner";
 import FileIcon from "../Icons/FileIcon";
 import { useNavigate } from "react-router";
+import { useState } from "react";
+import { debounce } from "../../utils/debounce";
 
 const Search = () => {
-  const { data, isError, isLoading } = useSearchFs("а");
+  const [query, setQuery] = useState("");
+  const { data, isError, isLoading } = useSearchFs(query);
   const navigate = useNavigate();
 
   function goToFile(id) {
@@ -14,10 +17,15 @@ const Search = () => {
     navigate(`/catalog/${id}`);
   }
 
+  const debouncedSearch = debounce(e => {
+    setQuery(e.target.value);
+  }, 1000);
+
   return (
     <>
       <div className="mb-8 relative">
         <input
+          onChange={debouncedSearch}
           type="text"
           placeholder="Поиск"
           className="w-1/2  block bg-white text-black p-2 rounded-md outline-none mx-auto"
@@ -25,10 +33,10 @@ const Search = () => {
 
         <div className="absolute z-10 w-1/2 left-1/4 bg-neutral-800 rounded-md p-3 h-32 flex items-center justify-center">
           {isLoading && <Spinner />}
-          {data?.matches.length === 0 && <p>По вашему запросу ничего не найдено</p>}
+          {data?.count === 0 && <p>По вашему запросу ничего не найдено</p>}
         </div>
 
-        {data?.matches.length > 0 && (
+        {data?.count > 0 && (
           <ul
             className={
               "absolute z-10 w-1/2 left-1/4 bg-neutral-800 rounded-md p-3 max-h-72 overflow-auto " +
