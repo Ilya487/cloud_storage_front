@@ -7,6 +7,7 @@ import { useNavigate } from "react-router";
 import { useRef, useState } from "react";
 import { debounce } from "../../utils/debounce";
 import clsx from "clsx";
+import { CiSearch } from "react-icons/ci";
 
 const NOT_SELECTED_ITEM = { id: -1, index: -1 };
 
@@ -114,19 +115,23 @@ const Search = () => {
   return (
     <>
       <div className="mb-8 relative">
-        <input
-          onKeyDown={handleArrowPress}
-          onBlur={() => console.log("test")}
-          onChange={debouncedSearch}
-          type="text"
-          placeholder="Поиск"
-          className="w-1/2  block bg-white text-black p-2 rounded-md outline-none mx-auto"
-        />
-
-        <div className="absolute z-10 w-1/2 left-1/4 bg-neutral-800 rounded-md p-3 h-32 flex items-center justify-center">
-          {isLoading && <Spinner />}
-          {data?.count === 0 && <p>По вашему запросу ничего не найдено</p>}
+        <div className="w-1/2 mx-auto flex items-center bg-white rounded-md px-2">
+          <CiSearch size={25} color="black" className="shrink-0" />
+          <input
+            onKeyDown={handleArrowPress}
+            onBlur={() => console.log("test")}
+            onChange={debouncedSearch}
+            type="text"
+            placeholder="Поиск"
+            className="w-full bg-white text-black p-2 outline-none"
+          />
         </div>
+        {(isLoading || data?.count === 0) && (
+          <div className="absolute z-10 w-1/2 left-1/4 bg-neutral-800 rounded-md p-3 h-32 flex items-center justify-center">
+            {isLoading && <Spinner />}
+            {data?.count === 0 && <p>По вашему запросу ничего не найдено</p>}
+          </div>
+        )}
 
         {data?.count > 0 && (
           <ul

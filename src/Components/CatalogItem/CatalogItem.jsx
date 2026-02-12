@@ -22,7 +22,11 @@ const CatalogItem = ({ catalogItem, handleContextMenu, isSelected, clickHandle }
   return (
     <li
       onDoubleClick={openFolder}
-      className={clsx(styles["catalog-item"], isSelected && styles["catalog-item--selected"])}
+      className={clsx(
+        "cursor-pointer rounded-sm",
+        styles["catalog-item"],
+        isSelected && styles["catalog-item--selected"],
+      )}
       onContextMenu={handleContextMenu}
       onClick={e => clickHandle(e, catalogItem)}
     >
