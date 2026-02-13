@@ -4,17 +4,27 @@ import { useSearchFs } from "../../API/fileSystemService";
 import Spinner from "../Spinner/Spinner";
 import FileIcon from "../Icons/FileIcon";
 import { useNavigate } from "react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { debounce } from "../../utils/debounce";
 import clsx from "clsx";
 import { CiSearch } from "react-icons/ci";
+import { MdClear } from "react-icons/md";
+import useInput from "../../hooks/useInput";
+import useOutsideHandle from "../../hooks/useOutsideHandle";
 
 const NOT_SELECTED_ITEM = { id: -1, index: -1 };
 
 const Search = () => {
   const ulRef = useRef();
+  const searchRef = useOutsideHandle(["click"], () => {
+    setVisibleSearchList(false);
+    setSelectedItem(NOT_SELECTED_ITEM);
+  });
+  const inputRef = useRef();
+  const [inputValue, handleInput, setInputValue] = useInput("");
   const [query, setQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState(NOT_SELECTED_ITEM);
+  const [visibleSearchList, setVisibleSearchList] = useState(true);
   const { data, isError, isLoading } = useSearchFs(query);
   const navigate = useNavigate();
 
@@ -23,14 +33,40 @@ const Search = () => {
     navigate(`/catalog/${id}`);
   }
 
-  const debouncedSearch = debounce(e => {
+  const debouncedSearch = useRef(
+    debounce(str => {
+      setQuery(str);
+      setVisibleSearchList(true);
+      setSelectedItem(NOT_SELECTED_ITEM);
+    }, 300),
+  );
+
+  useEffect(() => {
+    debouncedSearch.current(inputValue);
+  }, [inputValue]);
+
+  function handleItemClick(id) {
     setSelectedItem(NOT_SELECTED_ITEM);
-    setQuery(e.target.value);
-  }, 300);
+    setVisibleSearchList(false);
+    goToFile(id);
+  }
+
+  function handleClearBtnClick() {
+    setInputValue("");
+    setVisibleSearchList(false);
+    inputRef.current.focus();
+  }
 
   function handleArrowPress(e) {
-    if (!(e.key === "ArrowUp" || e.key === "ArrowDown")) return;
+    if (!(e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Enter")) return;
     if (!data || data?.count == 0) return;
+    if (e.key === "Enter" && selectedItem != NOT_SELECTED_ITEM) {
+      goToFile(data.matches[selectedItem.index].parent_id);
+      setVisibleSearchList(false);
+      setSelectedItem(NOT_SELECTED_ITEM);
+      ulRef.current.focus();
+      return;
+    }
     e.preventDefault();
 
     let newSelectedItem;
@@ -48,9 +84,7 @@ const Search = () => {
     if (selectedItem == NOT_SELECTED_ITEM) {
       newSelectedItem.id = data.matches[data.count - 1].id;
       newSelectedItem.index = data.count - 1;
-    }
-
-    if (selectedItem.index == 0) {
+    } else if (selectedItem.index == 0) {
       const updateIndex = data.count - 1;
       newSelectedItem.id = data.matches[updateIndex].id;
       newSelectedItem.index = updateIndex;
@@ -114,31 +148,42 @@ const Search = () => {
 
   return (
     <>
-      <div className="mb-8 relative">
-        <div className="w-1/2 mx-auto flex items-center bg-white rounded-md px-2">
+      <div className="w-1/2 mx-auto mb-8 relative" ref={searchRef}>
+        <div className="flex items-center bg-white rounded-md px-2">
           <CiSearch size={25} color="black" className="shrink-0" />
           <input
+            ref={inputRef}
             onKeyDown={handleArrowPress}
-            onBlur={() => console.log("test")}
-            onChange={debouncedSearch}
+            onFocus={() => setVisibleSearchList(true)}
+            value={inputValue}
+            onChange={handleInput}
             type="text"
             placeholder="Поиск"
             className="w-full bg-white text-black p-2 outline-none"
           />
+          {inputValue.length > 0 && (
+            <MdClear
+              size={25}
+              color="black"
+              className="shrink-0 cursor-pointer"
+              onClick={handleClearBtnClick}
+            />
+          )}
         </div>
-        {(isLoading || data?.count === 0) && (
-          <div className="absolute z-10 w-1/2 left-1/4 bg-neutral-800 rounded-md p-3 h-32 flex items-center justify-center">
+        {visibleSearchList && (isLoading || data?.count === 0 || isError) && (
+          <div className="absolute z-10 w-full bg-neutral-800 rounded-md p-3 h-32 flex items-center justify-center">
             {isLoading && <Spinner />}
             {data?.count === 0 && <p>По вашему запросу ничего не найдено</p>}
+            {isError && <p>Произошла непредвиденная ошибка</p>}
           </div>
         )}
 
-        {data?.count > 0 && (
+        {data?.count > 0 && visibleSearchList && (
           <ul
             tabIndex={-1}
             ref={ulRef}
             className={
-              "absolute z-10 w-1/2 left-1/4 bg-neutral-800 rounded-md p-3 max-h-72 overflow-auto " +
+              "absolute z-10 w-full bg-neutral-800 rounded-md p-3 max-h-72 overflow-auto " +
               styles["search-list"]
             }
           >
@@ -147,11 +192,12 @@ const Search = () => {
                 data-id={item.id}
                 key={item.id}
                 onKeyDown={e => e.preventDefault()}
+                onClick={() => handleItemClick(item.parent_id)}
+                onMouseEnter={() => setSelectedItem(NOT_SELECTED_ITEM)}
                 className={clsx(
                   "p-3 rounded-md flex items-center hover:bg-neutral-900 cursor-pointer outline-non",
                   item.id === selectedItem.id && "bg-neutral-900",
                 )}
-                onClick={() => goToFile(item.parent_id)}
               >
                 {item.type == "folder" && <FolderIcon size={25} className={"mr-3"} />}
                 {item.type == "file" && <FileIcon size={25} className={"mr-3"} />}
