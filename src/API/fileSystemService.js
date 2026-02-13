@@ -172,13 +172,6 @@ export const useRenameObject = () => {
   });
 };
 
-export const useRefreshFolderContent = dirId => {
-  const queryClient = useQueryClient();
-  if (!isNaN(dirId)) dirId = Number.parseInt(dirId);
-
-  return () => queryClient.invalidateQueries({ queryKey: ["dir", dirId] });
-};
-
 export const useCreateFolder = () => {
   const apiFetch = useApi();
   const mutationFn = args => apiFetch(createFolder(args));

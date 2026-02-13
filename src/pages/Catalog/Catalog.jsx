@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { useFolderContent, useRefreshFolderContent } from "../../API/fileSystemService";
+import { useFolderContent } from "../../API/fileSystemService";
 import useContextMenu from "../../hooks/useContextMenu";
 import CatalogContextMenu from "../../Components/ContextMenu/CatalogContextMenu";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
@@ -14,10 +14,9 @@ import CatalogItems from "../../Components/CatalogItems/CatalogItems";
 
 const Catalog = () => {
   const { dirId } = useParams();
-  const { data, isPending } = useFolderContent(dirId);
+  const { data, isPending, refetch } = useFolderContent(dirId);
   const { isOpen, position, closeMenu, handleContextMenu } = useContextMenu();
   const catalogRef = useOutsideHandle(["click", "contextmenu"], () => closeMenu(), false, false);
-  const refreshFolder = useRefreshFolderContent(dirId);
 
   const [filterSetup, setFilterSetup] = useState({
     name: false,
@@ -56,7 +55,7 @@ const Catalog = () => {
           coords={position}
           contextMenuVisible={isOpen}
           onClose={() => closeMenu()}
-          onFolderCreate={refreshFolder}
+          onFolderCreate={refetch}
         />
       }
     </>
