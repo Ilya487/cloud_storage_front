@@ -7,10 +7,9 @@ import { useNavigate } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import { debounce } from "../../utils/debounce";
 import clsx from "clsx";
-import { CiSearch } from "react-icons/ci";
-import { MdClear } from "react-icons/md";
 import useInput from "../../hooks/useInput";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
+import SearchInput from "./SearchInput";
 
 const NOT_SELECTED_ITEM = { id: -1, index: -1 };
 
@@ -57,9 +56,14 @@ const Search = () => {
     inputRef.current.focus();
   }
 
-  function handleArrowPress(e) {
-    if (!(e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Enter")) return;
-    if (!data || data?.count == 0) return;
+  function handleInputBtns(e) {
+    handleArrowPress(e);
+    handleEnter(e);
+    handleEscp(e);
+    handleSpace(e);
+  }
+
+  function handleEnter(e) {
     if (e.key === "Enter" && selectedItem != NOT_SELECTED_ITEM) {
       goToFile(data.matches[selectedItem.index].parent_id);
       setVisibleSearchList(false);
@@ -67,6 +71,21 @@ const Search = () => {
       ulRef.current.focus();
       return;
     }
+  }
+
+  function handleEscp(e) {
+    if (e.key !== "Escape") return;
+    setSelectedItem(NOT_SELECTED_ITEM);
+    setVisibleSearchList(false);
+  }
+
+  function handleSpace(e) {
+    if (!(e.keyCode == 32 && e.ctrlKey)) return;
+    setVisibleSearchList(true);
+  }
+
+  function handleArrowPress(e) {
+    if (!(e.key === "ArrowUp" || e.key === "ArrowDown")) return;
     e.preventDefault();
 
     let newSelectedItem;
@@ -149,27 +168,14 @@ const Search = () => {
   return (
     <>
       <div className="w-1/2 mx-auto mb-8 relative" ref={searchRef}>
-        <div className="flex items-center bg-white rounded-md px-2">
-          <CiSearch size={25} color="black" className="shrink-0" />
-          <input
-            ref={inputRef}
-            onKeyDown={handleArrowPress}
-            onFocus={() => setVisibleSearchList(true)}
-            value={inputValue}
-            onChange={handleInput}
-            type="text"
-            placeholder="Поиск"
-            className="w-full bg-white text-black p-2 outline-none"
-          />
-          {inputValue.length > 0 && (
-            <MdClear
-              size={25}
-              color="black"
-              className="shrink-0 cursor-pointer"
-              onClick={handleClearBtnClick}
-            />
-          )}
-        </div>
+        <SearchInput
+          ref={inputRef}
+          onClearBtnClick={handleClearBtnClick}
+          onKeyDown={handleInputBtns}
+          onFocus={() => setVisibleSearchList(true)}
+          value={inputValue}
+          onChange={handleInput}
+        />
         {visibleSearchList && (isLoading || data?.count === 0 || isError) && (
           <div className="absolute z-10 w-full bg-neutral-800 rounded-md p-3 h-32 flex items-center justify-center">
             {isLoading && <Spinner />}
