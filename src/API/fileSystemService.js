@@ -226,5 +226,6 @@ export const useSearchFs = query => {
     queryKey: ["search", query],
     queryFn,
     refetchOnWindowFocus: false,
+    enabled: query.length >= 1,
   });
 };
