@@ -1,15 +1,12 @@
-import styles from "./Search.module.css";
-import FolderIcon from "../Icons/FolderIcon";
 import { useSearchFs } from "../../API/fileSystemService";
 import Spinner from "../Spinner/Spinner";
-import FileIcon from "../Icons/FileIcon";
 import { useNavigate } from "react-router";
 import { useEffect, useRef, useState } from "react";
 import { debounce } from "../../utils/debounce";
-import clsx from "clsx";
 import useInput from "../../hooks/useInput";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import SearchInput from "./SearchInput";
+import SearchList from "./SearchList";
 
 const NOT_SELECTED_ITEM = { id: -1, index: -1 };
 
@@ -44,13 +41,14 @@ const Search = () => {
     debouncedSearch.current(inputValue);
   }, [inputValue]);
 
-  function handleItemClick(id) {
+  function handleItemClick(item) {
     setSelectedItem(NOT_SELECTED_ITEM);
     setVisibleSearchList(false);
-    goToFile(id);
+    goToFile(item.parent_id);
   }
 
   function handleClearBtnClick() {
+    setSelectedItem(NOT_SELECTED_ITEM);
     setInputValue("");
     setVisibleSearchList(false);
     inputRef.current.focus();
@@ -85,6 +83,7 @@ const Search = () => {
   }
 
   function handleArrowPress(e) {
+    if (!data || data?.count == 0) return;
     if (!(e.key === "ArrowUp" || e.key === "ArrowDown")) return;
     e.preventDefault();
 
@@ -93,8 +92,6 @@ const Search = () => {
     else newSelectedItem = handleDown();
 
     setSelectedItem(newSelectedItem);
-
-    scrollToSelectedItem(newSelectedItem.id);
   }
 
   function handleUp() {
@@ -135,36 +132,6 @@ const Search = () => {
     return newSelectedItem;
   }
 
-  function scrollToSelectedItem(id) {
-    const element = ulRef.current.querySelector(`[data-id="${id}"]`);
-    const offset = 12;
-    const container = ulRef.current;
-
-    const elementTopRelativeToContainer = element.offsetTop;
-    const elementBottomRelativeToContainer = element.offsetTop + element.offsetHeight;
-
-    const currentScrollTop = container.scrollTop;
-    const containerHeight = container.clientHeight;
-
-    const isVisible =
-      elementTopRelativeToContainer >= currentScrollTop &&
-      elementBottomRelativeToContainer <= currentScrollTop + containerHeight;
-
-    if (isVisible) return;
-
-    let newScrollTop = currentScrollTop;
-
-    if (elementTopRelativeToContainer < currentScrollTop) {
-      newScrollTop = elementTopRelativeToContainer - offset;
-    } else if (elementBottomRelativeToContainer > currentScrollTop + containerHeight) {
-      newScrollTop = elementBottomRelativeToContainer - containerHeight + offset;
-    }
-
-    container.scrollTo({
-      top: newScrollTop,
-    });
-  }
-
   return (
     <>
       <div className="w-1/2 mx-auto mb-8 relative" ref={searchRef}>
@@ -185,39 +152,13 @@ const Search = () => {
         )}
 
         {data?.count > 0 && visibleSearchList && (
-          <ul
-            tabIndex={-1}
+          <SearchList
             ref={ulRef}
-            className={
-              "absolute z-10 w-full bg-neutral-800 rounded-md p-3 max-h-72 overflow-auto " +
-              styles["search-list"]
-            }
-          >
-            {data.matches.map(item => (
-              <li
-                data-id={item.id}
-                key={item.id}
-                onKeyDown={e => e.preventDefault()}
-                onClick={() => handleItemClick(item.parent_id)}
-                onMouseEnter={() => setSelectedItem(NOT_SELECTED_ITEM)}
-                className={clsx(
-                  "p-3 rounded-md flex items-center hover:bg-neutral-900 cursor-pointer outline-non",
-                  item.id === selectedItem.id && "bg-neutral-900",
-                )}
-              >
-                {item.type == "folder" && <FolderIcon size={25} className={"mr-3"} />}
-                {item.type == "file" && <FileIcon size={25} className={"mr-3"} />}
-                <div className="w-full">
-                  <p className="text-sm truncate" title={item.name}>
-                    {item.name}
-                  </p>
-                  <p className="text-sm truncate" title={item.path}>
-                    {item.path}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+            items={data.matches}
+            selectedItemId={selectedItem != NOT_SELECTED_ITEM ? selectedItem.id : null}
+            onItemClick={handleItemClick}
+            onMouseEnter={() => setSelectedItem(NOT_SELECTED_ITEM)}
+          />
         )}
       </div>
     </>
