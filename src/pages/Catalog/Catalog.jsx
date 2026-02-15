@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { useFolderContent, useRefreshFolderContent } from "../../API/fileSystemService";
+import { useFolderContent } from "../../API/fileSystemService";
 import useContextMenu from "../../hooks/useContextMenu";
 import CatalogContextMenu from "../../Components/ContextMenu/CatalogContextMenu";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
@@ -11,13 +11,13 @@ import useFilteredCatalog from "./useFilteredCatalog";
 import CatalogFilter from "../../Components/CatalogFilter/CatalogFilter";
 import useFileDrop from "../../hooks/useFileDrop";
 import CatalogItems from "../../Components/CatalogItems/CatalogItems";
+import Search from "../../Components/Search/Search";
 
 const Catalog = () => {
   const { dirId } = useParams();
-  const { data, isPending } = useFolderContent(dirId);
+  const { data, isPending, refetch } = useFolderContent(dirId);
   const { isOpen, position, closeMenu, handleContextMenu } = useContextMenu();
   const catalogRef = useOutsideHandle(["click", "contextmenu"], () => closeMenu(), false, false);
-  const refreshFolder = useRefreshFolderContent(dirId);
 
   const [filterSetup, setFilterSetup] = useState({
     name: false,
@@ -28,7 +28,6 @@ const Catalog = () => {
   const filteredCatalog = useFilteredCatalog(data?.contents, filterSetup);
   const { handleDrop, handleOver, handleLeave, canBeDrop } = useFileDrop(dirId);
 
-  if (isPending) return <p>Загрузка...</p>;
   return (
     <>
       <section
@@ -40,15 +39,23 @@ const Catalog = () => {
         onDragLeave={handleLeave}
         onDragOver={handleOver}
       >
-        <PathNavigator path={data.path} />
-        {filteredCatalog?.length > 0 && (
-          <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
-        )}
-        {filteredCatalog?.length > 0 && (
-          <CatalogItems items={filteredCatalog} dirId={dirId} path={data.path} />
+        <Search />
+
+        {isPending && <p>Загрузка...</p>}
+        {!isPending && <PathNavigator path={data.path} />}
+        {!isPending && filteredCatalog?.length > 0 && (
+          <>
+            <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
+            <CatalogItems
+              items={filteredCatalog}
+              dirId={dirId}
+              path={data.path}
+              refreshFolder={refetch}
+            />
+          </>
         )}
 
-        {data.contents.length == 0 && <p className={styles["empty-dir"]}>{"Эта папка пуста."}</p>}
+        {data?.contents.length == 0 && <p className={styles["empty-dir"]}>{"Эта папка пуста."}</p>}
       </section>
       {
         <CatalogContextMenu
@@ -56,7 +63,7 @@ const Catalog = () => {
           coords={position}
           contextMenuVisible={isOpen}
           onClose={() => closeMenu()}
-          onFolderCreate={refreshFolder}
+          onFolderCreate={refetch}
         />
       }
     </>

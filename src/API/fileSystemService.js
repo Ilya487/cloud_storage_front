@@ -81,6 +81,15 @@ function getDirIdByPath(path) {
   };
 }
 
+function search(query) {
+  return {
+    url: SERVER_URL + `/search?query=${query}`,
+    options: {
+      credentials: "include",
+    },
+  };
+}
+
 export function useDirIdByPath() {
   const queryClient = useQueryClient();
   const apiFetch = useApi();
@@ -163,13 +172,6 @@ export const useRenameObject = () => {
   });
 };
 
-export const useRefreshFolderContent = dirId => {
-  const queryClient = useQueryClient();
-  if (!isNaN(dirId)) dirId = Number.parseInt(dirId);
-
-  return () => queryClient.invalidateQueries({ queryKey: ["dir", dirId] });
-};
-
 export const useCreateFolder = () => {
   const apiFetch = useApi();
   const mutationFn = args => apiFetch(createFolder(args));
@@ -204,5 +206,26 @@ export const useMoveFolder = () => {
     onSuccess: (_, { itemId }) => {
       deleteDirPathCache(itemId);
     },
+  });
+};
+
+export const useSearchFs = query => {
+  const apiFetch = useApi();
+  const queryClient = useQueryClient();
+
+  const queryFn = async ({ signal }) => {
+    await queryClient.cancelQueries({ queryKey: ["search"], exact: true }, { silent: true });
+    const requestOptions = search(query);
+    requestOptions.options.signal = signal;
+
+    const data = await apiFetch(requestOptions);
+    return data;
+  };
+
+  return useQuery({
+    queryKey: ["search", query],
+    queryFn,
+    refetchOnWindowFocus: false,
+    enabled: query.length >= 1,
   });
 };

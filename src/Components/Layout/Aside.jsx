@@ -9,7 +9,7 @@ const Aside = () => {
 
   if (data && data.auth == true)
     return (
-      <aside>
+      <aside className={styles.aside}>
         <Link to={{ pathname: "/catalog" }}>Каталог</Link>
         <Link to={{ pathname: "/upload" }}>Загрузка {countOfActiveUpload}</Link>
       </aside>

@@ -8,7 +8,7 @@ const Header = () => {
 
   if (isPending) return <></>;
   return (
-    <header style={{ display: "flex", justifyContent: "space-between" }}>
+    <header className={styles.header} style={{ display: "flex", justifyContent: "space-between" }}>
       <p>Это хедер</p>
       {(!data || data.auth == false) && <Link to={{ pathname: "/login" }}>Вход</Link>}
       {data && data.auth && <button onClick={logout.mutate}>Выход</button>}

@@ -2,13 +2,11 @@ import { useState } from "react";
 import useContextMenu from "../../hooks/useContextMenu";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CatalogItem from "../CatalogItem/CatalogItem";
-import { useRefreshFolderContent } from "../../API/fileSystemService";
 import ItemContextMenu from "../ContextMenu/ItemContextMenu";
 
-const CatalogItems = ({ items, dirId, path }) => {
+const CatalogItems = ({ items, refreshFolder, path }) => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [visualSelectedItems, setVisualSelectedItems] = useState([]);
-  const refreshFolder = useRefreshFolderContent(dirId);
 
   const { isOpen: isMenuOpen, position, closeMenu, handleContextMenu } = useContextMenu();
   const itemsListRef = useOutsideHandle(["contextmenu", "click"], () => {
@@ -75,8 +73,8 @@ const CatalogItems = ({ items, dirId, path }) => {
         coords={position}
         items={selectedItems}
         itemsCurrentPath={path}
-        onRename={() => refreshFolder()}
-        onDelete={() => refreshFolder()}
+        onRename={refreshFolder}
+        onDelete={refreshFolder}
         contextMenuVisible={isMenuOpen}
       />
     </>

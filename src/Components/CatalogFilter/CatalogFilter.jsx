@@ -40,8 +40,11 @@ const CatalogFilter = ({ filterSetup, setFilterSetup }) => {
           Название
         </button>
         <FaArrowDown
-          display={filterSetup.name ? "true" : "none"}
-          className={clsx(styles.arrow, filterSetup.ascending && styles["arrow--up"])}
+          className={clsx(
+            styles.arrow,
+            !filterSetup.name && "hidden",
+            filterSetup.ascending && styles["arrow--up"],
+          )}
         />
       </div>
       <div className={styles["filter-item"]}>
@@ -49,8 +52,11 @@ const CatalogFilter = ({ filterSetup, setFilterSetup }) => {
           Дата создания
         </button>{" "}
         <FaArrowDown
-          display={filterSetup.date ? "true" : "none"}
-          className={clsx(styles.arrow, filterSetup.ascending && styles["arrow--up"])}
+          className={clsx(
+            styles.arrow,
+            !filterSetup.date && "hidden",
+            filterSetup.ascending && styles["arrow--up"],
+          )}
         />
       </div>
       <div className={styles["filter-item"]}>
@@ -58,8 +64,11 @@ const CatalogFilter = ({ filterSetup, setFilterSetup }) => {
           Размер файла
         </button>
         <FaArrowDown
-          display={filterSetup.size ? "true" : "none"}
-          className={clsx(styles.arrow, filterSetup.ascending && styles["arrow--up"])}
+          className={clsx(
+            styles.arrow,
+            !filterSetup.size && "hidden",
+            filterSetup.ascending && styles["arrow--up"],
+          )}
         />
       </div>
     </div>
