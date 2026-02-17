@@ -29,9 +29,7 @@ export class FileSender {
     this.serverUrl = SERVER_URL;
     this.#file = file;
     this.#retriesCount = retriesCount;
-    if (destinationDirId == "root") {
-      this.#destinationDirId = "";
-    } else this.#destinationDirId = destinationDirId;
+    this.#destinationDirId = destinationDirId;
   }
 
   async initialize() {
@@ -93,13 +91,12 @@ export class FileSender {
 
   #sendChunk(currentChunk) {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${this.serverUrl}/upload/chunk`);
+    xhr.open("POST", `${this.serverUrl}/upload/chunk/${this.#sessionId}`);
     xhr.withCredentials = true;
-    xhr.setRequestHeader("X-Session-Id", this.#sessionId);
     xhr.setRequestHeader("X-Chunk-Num", currentChunk);
 
     xhr.send(
-      this.#file.slice(this.#chunkSize * (currentChunk - 1), this.#chunkSize * currentChunk)
+      this.#file.slice(this.#chunkSize * (currentChunk - 1), this.#chunkSize * currentChunk),
     );
     this.#xhrMap.set(xhr, xhr);
 
@@ -164,7 +161,7 @@ export class FileSender {
   }
 
   async #sendCancelRequest() {
-    const response = await fetch(`${this.serverUrl}/upload/cancel?sessionId=${this.#sessionId}`, {
+    const response = await fetch(`${this.serverUrl}/upload/cancel/${this.#sessionId}`, {
       credentials: "include",
       method: "DELETE",
     });
@@ -177,12 +174,9 @@ export class FileSender {
   async #startBuild() {
     this.#updateStatus(FileSender.STATUS_BUILDING);
 
-    const response = await fetch(this.serverUrl + "/upload/startBuild", {
+    const response = await fetch(this.serverUrl + `/upload/${this.#sessionId}/build`, {
       credentials: "include",
       method: "POST",
-      body: JSON.stringify({
-        sessionId: this.#sessionId,
-      }),
     });
 
     if (!response.ok) {
@@ -212,7 +206,7 @@ export class FileSender {
   }
 
   async #checkFileBuildingStatus() {
-    const response = await fetch(this.serverUrl + `/upload/status?sessionId=${this.#sessionId}`, {
+    const response = await fetch(this.serverUrl + `/upload/status/${this.#sessionId}`, {
       credentials: "include",
     });
 
