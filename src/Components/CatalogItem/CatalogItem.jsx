@@ -4,6 +4,7 @@ import clsx from "clsx";
 import fileSizeDisplay from "../../utils/fileSizeDisplay";
 import FolderIcon from "../Icons/FolderIcon";
 import FileIcon from "../Icons/FileIcon";
+import { displayFile } from "../../API/fileSystemService";
 
 const CatalogItem = ({ catalogItem, handleContextMenu, isSelected, clickHandle }) => {
   const { id, name, type, created_at, size } = catalogItem;
@@ -19,9 +20,17 @@ const CatalogItem = ({ catalogItem, handleContextMenu, isSelected, clickHandle }
     navigator(updatedPath);
   }
 
+  function handleClick() {
+    if (type == "folder") {
+      openFolder();
+      return;
+    }
+    displayFile(id, name);
+  }
+
   return (
     <li
-      onDoubleClick={openFolder}
+      onDoubleClick={handleClick}
       className={clsx(
         "cursor-pointer rounded-sm",
         styles["catalog-item"],

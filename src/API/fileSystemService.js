@@ -224,3 +224,10 @@ export const useSearchFs = query => {
     enabled: query.length > 1,
   });
 };
+
+export async function displayFile(fileId, fileName) {
+  const a = document.createElement("a");
+  a.href = SERVER_URL + `/fs/file/${fileId}/${fileName}`;
+  a.target = "_blank";
+  a.click();
+}
