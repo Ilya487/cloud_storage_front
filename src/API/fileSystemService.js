@@ -3,10 +3,8 @@ import { SERVER_URL } from "./config";
 import useApi from "./useApi";
 
 function getFolderContent(dirId = null) {
-  dirId = dirId == "root" ? "" : dirId;
-
   return {
-    url: SERVER_URL + `/folder?dirId=${dirId}`,
+    url: SERVER_URL + `/fs/folder/${dirId}`,
     options: {
       credentials: "include",
     },
@@ -15,12 +13,11 @@ function getFolderContent(dirId = null) {
 
 function renameObject({ objectId, newName }) {
   return {
-    url: SERVER_URL + "/rename",
+    url: SERVER_URL + `/fs/rename/${objectId}`,
     options: {
       method: "PATCH",
       credentials: "include",
       body: JSON.stringify({
-        objectId,
         newName,
       }),
     },
@@ -31,7 +28,7 @@ function createFolder({ name, parentDirId }) {
   parentDirId = parentDirId == "root" ? "" : parentDirId;
 
   return {
-    url: SERVER_URL + "/folder",
+    url: SERVER_URL + "/fs/folder",
     options: {
       method: "POST",
       credentials: "include",
@@ -45,9 +42,9 @@ function createFolder({ name, parentDirId }) {
 
 function deleteObject({ items }) {
   return {
-    url: SERVER_URL + `/delete`,
+    url: SERVER_URL + `/fs/delete`,
     options: {
-      method: "POST",
+      method: "DELETE",
       credentials: "include",
       body: JSON.stringify({
         items: items,
@@ -57,10 +54,8 @@ function deleteObject({ items }) {
 }
 
 function moveObject({ items, toDirId }) {
-  toDirId = toDirId == "root" ? "" : toDirId;
-
   return {
-    url: SERVER_URL + "/move",
+    url: SERVER_URL + "/fs/move",
     options: {
       method: "PATCH",
       credentials: "include",
@@ -74,7 +69,7 @@ function moveObject({ items, toDirId }) {
 
 function getDirIdByPath(path) {
   return {
-    url: SERVER_URL + `/folder/id-by-path?path=${path}`,
+    url: SERVER_URL + `/fs/folder/id-by-path?path=${path}`,
     options: {
       credentials: "include",
     },
@@ -83,7 +78,7 @@ function getDirIdByPath(path) {
 
 function search(query) {
   return {
-    url: SERVER_URL + `/search?query=${query}`,
+    url: SERVER_URL + `/fs/search?query=${query}`,
     options: {
       credentials: "include",
     },
@@ -226,6 +221,6 @@ export const useSearchFs = query => {
     queryKey: ["search", query],
     queryFn,
     refetchOnWindowFocus: false,
-    enabled: query.length >= 1,
+    enabled: query.length > 1,
   });
 };
