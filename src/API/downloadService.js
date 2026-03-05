@@ -1,7 +1,7 @@
 import { SERVER_URL } from "./config";
 
 export async function downloadFile(fileId) {
-  const url = SERVER_URL + `/download/file?fileId=${fileId}`;
+  const url = SERVER_URL + `/download/file/${fileId}`;
   startDownload(url);
 }
 
@@ -22,7 +22,7 @@ export async function downloadDirOrMany(items) {
   const taskId = json.taskId;
   await startPolling(taskId);
 
-  startDownload(SERVER_URL + `/download/archive?taskId=${taskId}`);
+  startDownload(SERVER_URL + `/download/archive/${taskId}`);
 }
 
 function startPolling(taskId) {
@@ -45,7 +45,7 @@ function startPolling(taskId) {
 }
 
 async function checkTaskStatus(taskId) {
-  const res = await fetch(SERVER_URL + `/download/archive/status?taskId=${taskId}`, {
+  const res = await fetch(SERVER_URL + `/download/archive/status/${taskId}`, {
     credentials: "include",
   });
   const json = await res.json();
