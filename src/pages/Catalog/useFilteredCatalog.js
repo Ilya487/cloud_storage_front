@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function useFilteredCatalog(
   catalog,
@@ -23,9 +23,22 @@ function useFilteredCatalog(
   });
   const [filteredCatalog, setFilteredCatalog] = useState();
 
+  const activeFilter = useRef();
+
+  function findActiveFilter() {
+    for (let filter in filterSetup) {
+      if (filterSetup[filter]) {
+        return filter;
+      }
+    }
+  }
+
+  if (activeFilter.current === undefined) {
+    activeFilter.current = findActiveFilter();
+  }
+
   useEffect(() => {
     if (!catalog) return;
-    // debugger;
 
     if (filterSetup.name) {
       filterByName(filterSetup.ascending);
@@ -107,7 +120,22 @@ function useFilteredCatalog(
     setFilteredCatalog(updatedCatalog);
   }
 
-  return { filteredCatalog, setFilterSetup, filterSetup };
+  function changeFilter(filterName) {
+    const updatedFilter = { ...filterSetup };
+
+    if (filterName == activeFilter.current) {
+      updatedFilter.ascending = !updatedFilter.ascending;
+    } else {
+      updatedFilter[activeFilter.current] = false;
+      updatedFilter[filterName] = true;
+      activeFilter.current = filterName;
+      updatedFilter.ascending = true;
+    }
+
+    setFilterSetup(updatedFilter);
+  }
+
+  return { filteredCatalog, changeFilter, filterSetup };
 }
 
 export default useFilteredCatalog;

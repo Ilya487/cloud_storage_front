@@ -18,7 +18,7 @@ const Catalog = () => {
   const { isOpen, position, closeMenu, handleContextMenu } = useContextMenu();
   const catalogRef = useOutsideHandle(["click", "contextmenu"], () => closeMenu(), false, false);
 
-  const { filteredCatalog, setFilterSetup, filterSetup } = useFilteredCatalog(
+  const { filteredCatalog, changeFilter, filterSetup } = useFilteredCatalog(
     data?.contents,
     true,
     "date",
@@ -42,7 +42,7 @@ const Catalog = () => {
         {!isPending && <PathNavigator path={data.path} />}
         {!isPending && filteredCatalog?.length > 0 && (
           <>
-            <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
+            <CatalogFilter filterSetup={filterSetup} changeFilter={changeFilter} />
             <CatalogItems
               items={filteredCatalog}
               dirId={dirId}
