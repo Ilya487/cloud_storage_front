@@ -18,7 +18,11 @@ const Catalog = () => {
   const { isOpen, position, closeMenu, handleContextMenu } = useContextMenu();
   const catalogRef = useOutsideHandle(["click", "contextmenu"], () => closeMenu(), false, false);
 
-  const { filteredCatalog, setFilterSetup, filterSetup } = useFilteredCatalog(data?.contents);
+  const { filteredCatalog, setFilterSetup, filterSetup } = useFilteredCatalog(
+    data?.contents,
+    true,
+    "date",
+  );
   const { handleDrop, handleOver, handleLeave, canBeDrop } = useFileDrop(dirId);
 
   return (
