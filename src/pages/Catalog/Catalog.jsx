@@ -5,7 +5,6 @@ import CatalogContextMenu from "../../Components/ContextMenu/CatalogContextMenu"
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import styles from "./Catalog.module.css";
 import clsx from "clsx";
-import { useState } from "react";
 import PathNavigator from "../../Components/PathNavigator/PathNavigator";
 import useFilteredCatalog from "./useFilteredCatalog";
 import CatalogFilter from "../../Components/CatalogFilter/CatalogFilter";
@@ -19,13 +18,7 @@ const Catalog = () => {
   const { isOpen, position, closeMenu, handleContextMenu } = useContextMenu();
   const catalogRef = useOutsideHandle(["click", "contextmenu"], () => closeMenu(), false, false);
 
-  const [filterSetup, setFilterSetup] = useState({
-    name: false,
-    date: true,
-    size: false,
-    ascending: true,
-  });
-  const filteredCatalog = useFilteredCatalog(data?.contents, filterSetup);
+  const { filteredCatalog, setFilterSetup, filterSetup } = useFilteredCatalog(data?.contents);
   const { handleDrop, handleOver, handleLeave, canBeDrop } = useFileDrop(dirId);
 
   return (
