@@ -3,7 +3,7 @@ import { FaArrowDown } from "react-icons/fa";
 
 const CatalogItemsFilter = ({ text, onClick, visible, ascending }) => {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center">
       <div className="flex items-center gap-2 relative z-0 group">
         <button onClick={onClick} className="relative group z-0">
           {text}

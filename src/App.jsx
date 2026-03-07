@@ -9,6 +9,7 @@ import Upload from "./pages/Upload/Upload";
 import { ToastContainer } from "react-toastify";
 import PrivateRoute from "./routing/PrivateRoute";
 import PublicRoute from "./routing/PublicRoute";
+import Trash from "./pages/Trash/Trash";
 
 function App() {
   const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ function App() {
                 <Route path=":dirId" element={<Catalog />} />
               </Route>
               <Route path="/upload" element={<Upload />} />
+              <Route path="/trash" element={<Trash />} />
             </Route>
             <Route path="*" element={<h1>Page not found</h1>} />
           </Route>

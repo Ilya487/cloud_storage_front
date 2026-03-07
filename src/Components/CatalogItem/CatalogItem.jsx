@@ -32,9 +32,8 @@ const CatalogItem = ({ catalogItem, handleContextMenu, isSelected, clickHandle }
     <li
       onDoubleClick={handleClick}
       className={clsx(
-        "cursor-pointer rounded-sm",
-        styles["catalog-item"],
-        isSelected && styles["catalog-item--selected"],
+        "grid grid-cols-[4fr_1fr_1fr] items-center p-1.5 cursor-pointer rounded-sm hover:bg-neutral-500",
+        isSelected && "bg-neutral-500",
       )}
       onContextMenu={handleContextMenu}
       onClick={e => clickHandle(e, catalogItem)}
