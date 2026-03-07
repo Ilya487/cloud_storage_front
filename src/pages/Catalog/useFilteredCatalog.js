@@ -1,17 +1,31 @@
 import { useEffect, useState } from "react";
 
-function useFilteredCatalog(catalog) {
-  const [filterSetup, setFilterSetup] = useState({
-    name: false,
-    date: true,
-    size: false,
-    deleteDate: false,
-    ascending: true,
+function useFilteredCatalog(
+  catalog,
+  dirFirst = true,
+  defaulFilterField = "name",
+  defaultAsc = true,
+) {
+  const [filterSetup, setFilterSetup] = useState(() => {
+    let res = {
+      name: false,
+      date: false,
+      size: false,
+      deleteDate: false,
+      ascending: Boolean(defaultAsc),
+    };
+
+    if (Object.hasOwn(res, defaulFilterField)) {
+      res[defaulFilterField] = true;
+    } else res.name = true;
+
+    return res;
   });
   const [filteredCatalog, setFilteredCatalog] = useState();
 
   useEffect(() => {
     if (!catalog) return;
+    // debugger;
 
     if (filterSetup.name) {
       filterByName(filterSetup.ascending);
@@ -31,8 +45,10 @@ function useFilteredCatalog(catalog) {
     const updatedCatalog = catalog.toSorted((a, b) => {
       let result = 0;
 
-      if (a.type == "folder" && b.type != "folder") return -1;
-      if (b.type == "folder" && a.type != "folder") return 1;
+      if (dirFirst) {
+        if (a.type == "folder" && b.type != "folder") return -1;
+        if (b.type == "folder" && a.type != "folder") return 1;
+      }
 
       if (a.name.toLowerCase() > b.name.toLowerCase()) {
         result = 1;
@@ -51,8 +67,11 @@ function useFilteredCatalog(catalog) {
   function filterByDate(ascending, fieldName) {
     const updatedCatalog = catalog.toSorted((a, b) => {
       let result = 0;
-      if (a.type == "folder" && b.type != "folder") return -1;
-      if (b.type == "folder" && a.type != "folder") return 1;
+
+      if (dirFirst) {
+        if (a.type == "folder" && b.type != "folder") return -1;
+        if (b.type == "folder" && a.type != "folder") return 1;
+      }
 
       const aDate = Date.parse(a[fieldName]);
       const bDate = Date.parse(b[fieldName]);
