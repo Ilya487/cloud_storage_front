@@ -1,17 +1,16 @@
 import ContextMenu from "./ContextMenu";
 import RenameDialog from "../RenameDialog/RenameDialog";
-import DeleteDialog from "../DeleteDialog/DeleteDialog";
 import MoveDialog from "../MoveDialog/MoveDialog";
 import { toast } from "react-toastify";
 import { createPortal } from "react-dom";
 import useMenuActions from "./useMenuActions";
 import { downloadDirOrMany, downloadFile } from "../../API/downloadService";
+import { useSendToTrash } from "../../API/fileSystemService";
 
 const ItemContextMenu = ({
   items,
   itemsCurrentPath,
   onRename,
-  onDelete,
   onClose,
   coords,
   contextMenuVisible,
@@ -23,9 +22,10 @@ const ItemContextMenu = ({
 
   const { handleOptionClick, disableActiveOptions, optionsVisible } = useMenuActions({
     rename: false,
-    delete: false,
     move: false,
   });
+
+  const { mutate: sendToTrash } = useSendToTrash();
 
   async function download() {
     if (items.length == 1 && items[0].type == "file") {
@@ -68,8 +68,8 @@ const ItemContextMenu = ({
             <li className="context-menu__item" onClick={() => handleOptionClick("move", true)}>
               Переместить
             </li>
-            <li className="context-menu__item" onClick={() => handleOptionClick("delete", true)}>
-              Удалить
+            <li className="context-menu__item" onClick={() => sendToTrash({ items })}>
+              Отправить в корзину
             </li>
           </ContextMenu>,
           document.body,
@@ -83,9 +83,6 @@ const ItemContextMenu = ({
           onRename={onRename}
           onClose={updatedOnClose}
         />
-      )}
-      {optionsVisible.delete && (
-        <DeleteDialog items={items} onClose={updatedOnClose} onDelete={onDelete} />
       )}
       {optionsVisible.move && (
         <MoveDialog items={items} itemsCurrentPath={itemsCurrentPath} onClose={updatedOnClose} />

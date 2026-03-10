@@ -5,7 +5,6 @@ import CatalogContextMenu from "../../Components/ContextMenu/CatalogContextMenu"
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import styles from "./Catalog.module.css";
 import clsx from "clsx";
-import { useState } from "react";
 import PathNavigator from "../../Components/PathNavigator/PathNavigator";
 import useFilteredCatalog from "./useFilteredCatalog";
 import CatalogFilter from "../../Components/CatalogFilter/CatalogFilter";
@@ -19,13 +18,11 @@ const Catalog = () => {
   const { isOpen, position, closeMenu, handleContextMenu } = useContextMenu();
   const catalogRef = useOutsideHandle(["click", "contextmenu"], () => closeMenu(), false, false);
 
-  const [filterSetup, setFilterSetup] = useState({
-    name: false,
-    date: true,
-    size: false,
-    ascending: true,
-  });
-  const filteredCatalog = useFilteredCatalog(data?.contents, filterSetup);
+  const { filteredCatalog, changeFilter, filterSetup } = useFilteredCatalog(
+    data?.contents,
+    true,
+    "date",
+  );
   const { handleDrop, handleOver, handleLeave, canBeDrop } = useFileDrop(dirId);
 
   return (
@@ -45,7 +42,7 @@ const Catalog = () => {
         {!isPending && <PathNavigator path={data.path} />}
         {!isPending && filteredCatalog?.length > 0 && (
           <>
-            <CatalogFilter filterSetup={filterSetup} setFilterSetup={setFilterSetup} />
+            <CatalogFilter filterSetup={filterSetup} changeFilter={changeFilter} />
             <CatalogItems
               items={filteredCatalog}
               dirId={dirId}
@@ -55,7 +52,9 @@ const Catalog = () => {
           </>
         )}
 
-        {data?.contents.length == 0 && <p className={styles["empty-dir"]}>{"Эта папка пуста."}</p>}
+        {data?.contents.length == 0 && (
+          <p className="text-4xl absolute top-1/2 left-1/2 -translate-1/2">Эта папка пуста</p>
+        )}
       </section>
       {
         <CatalogContextMenu

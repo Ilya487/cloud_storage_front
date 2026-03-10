@@ -134,7 +134,7 @@ const Search = () => {
 
   return (
     <>
-      <div className="w-1/2 mx-auto mb-8 relative" ref={searchRef}>
+      <div className="w-1/2 mb-8 relative" ref={searchRef}>
         <SearchInput
           ref={inputRef}
           onClearBtnClick={handleClearBtnClick}

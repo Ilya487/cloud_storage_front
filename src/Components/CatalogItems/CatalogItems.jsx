@@ -1,53 +1,32 @@
-import { useState } from "react";
 import useContextMenu from "../../hooks/useContextMenu";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CatalogItem from "../CatalogItem/CatalogItem";
 import ItemContextMenu from "../ContextMenu/ItemContextMenu";
+import useSelectMultipleCatalogItems from "../../hooks/useSelectMultipleCatalogItems";
 
 const CatalogItems = ({ items, refreshFolder, path }) => {
-  const [selectedItems, setSelectedItems] = useState([]);
-  const [visualSelectedItems, setVisualSelectedItems] = useState([]);
+  const {
+    selectedItems,
+    visualSelectedItems,
+    handleClick,
+    handleContextMenu: selectHandleContextMenu,
+    clearSelect,
+  } = useSelectMultipleCatalogItems();
 
   const { isOpen: isMenuOpen, position, closeMenu, handleContextMenu } = useContextMenu();
   const itemsListRef = useOutsideHandle(["contextmenu", "click"], () => {
     closeMenu();
-    setVisualSelectedItems([]);
+    clearSelect();
   });
 
   function clickHandle(e, catalogItem) {
-    const id = catalogItem.id;
-
-    if (visualSelectedItems.includes(id) && e.ctrlKey) {
-      const updatedIds = visualSelectedItems.filter(val => val != id);
-      const updatedItems = selectedItems.filter(item => item.id != id);
-      setVisualSelectedItems(updatedIds);
-      setSelectedItems(updatedItems);
-      closeMenu();
-      return;
-    }
-
-    if (e.ctrlKey) {
-      closeMenu();
-      setVisualSelectedItems([...visualSelectedItems, id]);
-
-      if (visualSelectedItems.length == 0) {
-        setSelectedItems([catalogItem]);
-      } else setSelectedItems([...selectedItems, catalogItem]);
-
-      return;
-    }
-
-    setVisualSelectedItems([]);
+    handleClick(e, catalogItem);
     closeMenu();
   }
 
   function contextMenuHandler(e, catalogItem) {
     handleContextMenu(e);
-
-    if (visualSelectedItems.length > 1 && visualSelectedItems.includes(catalogItem.id)) return;
-
-    setSelectedItems([catalogItem]);
-    setVisualSelectedItems([catalogItem.id]);
+    selectHandleContextMenu(catalogItem);
   }
 
   return (
@@ -56,7 +35,7 @@ const CatalogItems = ({ items, refreshFolder, path }) => {
         ref={itemsListRef}
         onClick={e => {
           if (e.ctrlKey) return;
-          setVisualSelectedItems([]);
+          clearSelect();
         }}
       >
         {items.map(item => (

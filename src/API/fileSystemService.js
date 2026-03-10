@@ -40,19 +40,6 @@ function createFolder({ name, parentDirId }) {
   };
 }
 
-function deleteObject({ items }) {
-  return {
-    url: SERVER_URL + `/fs/delete`,
-    options: {
-      method: "DELETE",
-      credentials: "include",
-      body: JSON.stringify({
-        items: items,
-      }),
-    },
-  };
-}
-
 function moveObject({ items, toDirId }) {
   return {
     url: SERVER_URL + "/fs/move",
@@ -81,6 +68,17 @@ function search(query) {
     url: SERVER_URL + `/fs/search?query=${query}`,
     options: {
       credentials: "include",
+    },
+  };
+}
+
+function sendToTrash(itemsIds) {
+  return {
+    url: SERVER_URL + "/fs/delete",
+    options: {
+      method: "DELETE",
+      credentials: "include",
+      body: JSON.stringify({ items: itemsIds }),
     },
   };
 }
@@ -176,21 +174,6 @@ export const useCreateFolder = () => {
   });
 };
 
-export const useDeleteObject = () => {
-  const queryClient = useQueryClient();
-  const deleteDirPathCache = useDeleteCacheDirPath();
-  const apiFetch = useApi();
-  const mutationFn = args => apiFetch(deleteObject(args));
-
-  return useMutation({
-    mutationFn,
-    onSuccess: (_, { objectId }) => {
-      deleteDirPathCache(objectId);
-      queryClient.removeQueries({ queryKey: ["dir", objectId] });
-    },
-  });
-};
-
 export const useMoveFolder = () => {
   const deleteDirPathCache = useDeleteCacheDirPath();
   const apiFetch = useApi();
@@ -230,4 +213,24 @@ export async function displayFile(fileId, fileName) {
   a.href = SERVER_URL + `/fs/file/${fileId}/${fileName}`;
   a.target = "_blank";
   a.click();
+}
+
+export function useSendToTrash() {
+  const apiFetch = useApi();
+  const queryClient = useQueryClient();
+
+  const mutationFn = async ({ items }) => {
+    const ids = items.map(item => item.id);
+    const dirToUpdate = items[0].parent_id ?? "root";
+
+    const data = await apiFetch(sendToTrash(ids));
+    return { data, dirToUpdate };
+  };
+
+  return useMutation({
+    mutationFn,
+    onSuccess: ({ dirToUpdate }) => {
+      queryClient.invalidateQueries({ queryKey: ["dir", dirToUpdate] });
+    },
+  });
 }

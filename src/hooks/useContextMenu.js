@@ -6,8 +6,8 @@ const useContextMenu = () => {
 
   function handleContextMenu(e) {
     e.preventDefault();
-    const x = e.clientX;
-    const y = e.clientY;
+    const x = e.pageX;
+    const y = e.pageY;
     setPosition({ x, y });
     setIsOpen(true);
   }

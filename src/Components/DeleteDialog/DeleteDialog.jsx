@@ -1,9 +1,9 @@
 import ModalWindow from "../ModalWindow/ModalWindow";
 import styles from "./DeleteDialog.module.css";
-import { useDeleteObject } from "../../API/fileSystemService";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import CancelBtn from "../CancelBtn/CancelBtn";
 import useErrorToast from "../../hooks/useErrorToast";
+import { useDeleteObject } from "../../API/trashService";
 
 const DeleteDialog = ({ items, onDelete, onClose }) => {
   const mutation = useDeleteObject();
@@ -11,7 +11,7 @@ const DeleteDialog = ({ items, onDelete, onClose }) => {
   const showErrorToast = useErrorToast();
 
   function handleClose() {
-    onClose();
+    onClose && onClose();
   }
 
   function submitDelete(e) {
@@ -22,10 +22,10 @@ const DeleteDialog = ({ items, onDelete, onClose }) => {
       {
         onSuccess: () => {
           handleClose();
-          onDelete();
+          onDelete && onDelete();
         },
         onError: error => showErrorToast(error.message),
-      }
+      },
     );
   }
 
