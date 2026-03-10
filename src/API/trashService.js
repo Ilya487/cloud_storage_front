@@ -24,9 +24,9 @@ function restoreItems(itemsIds) {
 
 function deleteObject({ items }) {
   return {
-    url: SERVER_URL + `/fs/delete`,
+    url: SERVER_URL + `/fs/trash/delete`,
     options: {
-      method: "DELETE",
+      method: "POST",
       credentials: "include",
       body: JSON.stringify({
         items: items,
@@ -47,16 +47,12 @@ export const useTrashContent = () => {
 
 export const useDeleteObject = () => {
   const queryClient = useQueryClient();
-  //   const deleteDirPathCache = useDeleteCacheDirPath();
   const apiFetch = useApi();
   const mutationFn = args => apiFetch(deleteObject(args));
 
   return useMutation({
     mutationFn,
-    onSuccess: (_, { objectId }) => {
-      //   deleteDirPathCache(objectId);
-      queryClient.removeQueries({ queryKey: ["dir", objectId] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trash"] }),
   });
 };
 
