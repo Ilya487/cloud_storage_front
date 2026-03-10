@@ -5,7 +5,6 @@ import FolderIcon from "../../Components/Icons/FolderIcon";
 import useContextMenu from "../../hooks/useContextMenu";
 import useOutsideHandle from "../../hooks/useOutsideHandle";
 import clsx from "clsx";
-import DeleteDialog from "../../Components/DeleteDialog/DeleteDialog";
 import useFilteredCatalog from "../Catalog/useFilteredCatalog";
 import useSelectMultipleCatalogItems from "../../hooks/useSelectMultipleCatalogItems";
 import CatalogItemsFilter from "../../Components/UI/CatalogItemsFilter";
@@ -47,7 +46,10 @@ const Trash = () => {
     <>
       <h1 className="text-4xl mb-5">Корзина</h1>
       {isLoading && <Spinner />}
-      {filteredTrash && (
+      {filteredTrash?.length == 0 && (
+        <p className="text-4xl absolute top-1/2 left-1/2 -translate-1/2">Корзина пуста</p>
+      )}
+      {filteredTrash && filteredTrash?.length > 0 && (
         <ul ref={itemsListRef}>
           <li className="grid grid-cols-[4fr_4fr_2fr] p-1.5">
             <CatalogItemsFilter
@@ -92,8 +94,7 @@ const Trash = () => {
           ))}
         </ul>
       )}
-      <TrashContextMenu coords={position} contextMenuVisible={isOpen} />
-      {/* <DeleteDialog items={[selectedItem]} /> */}
+      <TrashContextMenu coords={position} contextMenuVisible={isOpen} items={selectedItems} />
     </>
   );
 };

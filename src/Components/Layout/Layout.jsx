@@ -8,7 +8,7 @@ const Layout = () => {
       <Header />
       <div className="flex container mx-auto grow">
         <Aside />
-        <main className="grow p-8">
+        <main className="grow p-8 relative">
           <Outlet />
         </main>
       </div>

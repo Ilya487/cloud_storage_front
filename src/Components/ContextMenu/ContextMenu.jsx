@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./ContextMenu.module.css";
 import clsx from "clsx";
+import { createPortal } from "react-dom";
 
 const ContextMenu = ({ coords, children, ...args }) => {
   const [menuCoords, setMenuCoords] = useState({ x: 0, y: 0 });
@@ -27,7 +28,7 @@ const ContextMenu = ({ coords, children, ...args }) => {
 
   useEffect(calculateCoord, [coords]);
 
-  return (
+  return createPortal(
     <ul
       className={clsx("context-menu", styles.menu, args.className)}
       ref={menu}
@@ -38,7 +39,8 @@ const ContextMenu = ({ coords, children, ...args }) => {
       }}
     >
       {children}
-    </ul>
+    </ul>,
+    document.body,
   );
 };
 

@@ -52,7 +52,9 @@ const Catalog = () => {
           </>
         )}
 
-        {data?.contents.length == 0 && <p className={styles["empty-dir"]}>{"Эта папка пуста."}</p>}
+        {data?.contents.length == 0 && (
+          <p className="text-4xl absolute top-1/2 left-1/2 -translate-1/2">Эта папка пуста</p>
+        )}
       </section>
       {
         <CatalogContextMenu
