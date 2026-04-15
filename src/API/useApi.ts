@@ -1,6 +1,10 @@
 import { useNavigate } from "react-router";
-import { SERVER_URL } from "./config";
 import { useQueryClient } from "@tanstack/react-query";
+import { SERVER_URL } from "./config";
+
+export interface FetchDecoratorParams<TError = DefaultErrorBody> { url: RequestInfo, options?: RequestInit, errorHandler?: ErrorHandler<TError> }
+interface DefaultErrorBody { message: string, errors?: [] }
+type ErrorHandler<T> = (errorData: T) => void
 
 let inProgress = false;
 
@@ -8,7 +12,7 @@ const useApi = () => {
   const navigator = useNavigate();
   const queryClient = useQueryClient();
 
-  async function fetchDecorator({ url, options, errorHandler = false }) {
+  async function fetchDecorator<TError>({ url, options, errorHandler }: FetchDecoratorParams<TError>) {
     const response = await fetch(url, options);
     if (response.ok) return response.json();
     else if (response.status == 401 && inProgress) return;
@@ -37,14 +41,14 @@ const useApi = () => {
     else defaultErrorHandler(errorData);
   }
 
-  function defaultErrorHandler(errorData) {
-    if (errorData.errors) {
-      const message = errorData.errors.join("; ");
-      throw new Error(message);
-    } else throw new Error(errorData.message);
-  }
-
   return fetchDecorator;
 };
 
-export default useApi;
+const defaultErrorHandler: ErrorHandler<DefaultErrorBody> = (errorData) => {
+  if (errorData.errors) {
+    const message = errorData.errors.join("; ");
+    throw new Error(message);
+  } else throw new Error(errorData.message);
+}
+
+export default useApi
