@@ -48,7 +48,7 @@ const CatalogContextMenu = ({ onClose, contextMenuVisible, coords, dirId, onFold
         <CreateFolderDialog
           onClose={updatedOnClose}
           dirId={dirId}
-          onFolderCreate={onFolderCreate}
+          onFolderCreate={() => onFolderCreate && onFolderCreate()}
         />
       )}
 

@@ -62,7 +62,6 @@ const Catalog = () => {
           coords={position}
           contextMenuVisible={isOpen}
           onClose={() => closeMenu()}
-          onFolderCreate={refetch}
         />
       }
     </>
