@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { FileSender } from "../API/FileSender";
+import { FileSender } from "../API/FileSender.ts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
