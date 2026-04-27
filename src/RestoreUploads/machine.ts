@@ -1,6 +1,5 @@
 import {
     uploadsLocalStorageManager,
-    type StoredUploadSession,
 } from "../utils/uploadsLocalStorageManager.js";
 import {
     restoreSessionsInfo,
@@ -10,12 +9,10 @@ import {
 } from "../API/uploadSevice.js";
 import { action, createMachine, guard, immediate, invoke, reduce, state, transition } from "robot3";
 import matchFilesWithSessions from "./matchFilesWithSessions.js";
-import type { MatchesResult } from "./types.js";
+import type { MatchesResult, UploadRestoringInfo } from "./types.js";
 
 const events = ["finish", "exit", "selectFiles", "back", "continue", "confirm", "cancel"] as const;
 export type MachineEvent = (typeof events)[number];
-
-export type UploadRestoringInfo = StoredUploadSession & { reason?: string };
 
 type Context = {
     uploadsList: UploadRestoringInfo[];
@@ -126,11 +123,11 @@ export const restoringSessionsStateMachine = createMachine(
                     return { ...ctx, unrestoredUploads: unrestoredUploads };
                 }),
             ),
-            // transition(
-            //   "error",
-            //   "finished",
-            //   action(() => alert("EROR")),
-            // ),
+            transition(
+                "error",
+                "exit",
+                action(() => alert("EROR")),
+            ),
         ),
         handlingRestoreResult: state(
             immediate(
@@ -169,11 +166,8 @@ export const restoringSessionsStateMachine = createMachine(
                     const dataForStartLoading = successRestore.map(val => {
                         return { ...val, file: ctx.matchResult?.sessionIdFileMap.get(val.id) };
                     });
-                    // ctx.restoreResponse.forEach(response => {
-                    //   if (response.res) {
-                    //     res.push({ ...response, file: ctx.matchResult?.sessionIdFileMap.get(response.id) });
-                    //   }
-                    // });
+
+                    //начало загрузки
                     console.log("FINISHING", dataForStartLoading);
                 }),
             ),

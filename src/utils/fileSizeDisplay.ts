@@ -1,4 +1,4 @@
-export default function fileSizeDisplay(size) {
+export default function fileSizeDisplay(size: number) {
   if (size < 1000) {
     return size + " байт";
   }
