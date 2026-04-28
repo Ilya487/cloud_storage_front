@@ -10,6 +10,8 @@ import { ToastContainer } from "react-toastify";
 import PrivateRoute from "./routing/PrivateRoute";
 import PublicRoute from "./routing/PublicRoute";
 import Trash from "./pages/Trash/Trash";
+import RestoreAbortedUploads from "./RestoreUploads/RestoreAbortedUploads.tsx";
+import AuthHoc from "./HOC/AuthHoc.tsx";
 
 function App() {
   const queryClient = new QueryClient();
@@ -17,6 +19,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <UploadProvider>
+        <AuthHoc component={RestoreAbortedUploads} />
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route element={<PublicRoute />}>

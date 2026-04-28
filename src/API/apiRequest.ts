@@ -1,9 +1,13 @@
 import type { AuthData } from "./authService";
 import { SERVER_URL } from "./config";
 
-export interface FetchDecoratorParams<TError = DefaultErrorBody> { url: RequestInfo, options?: RequestInit, errorHandler?: ErrorHandler<TError> }
+export interface FetchDecoratorParams<TError = DefaultErrorBody> {
+    url: RequestInfo,
+    options?: RequestInit,
+    errorHandler?: ErrorHandler<TError>,
+}
 interface DefaultErrorBody { message: string, errors?: [] }
-type ErrorHandler<T> = (errorData: T) => void
+type ErrorHandler<T> = (errorData: T, response: Response) => void
 
 let refreshRequest: Promise<AuthData> | null = null;
 
@@ -13,12 +17,15 @@ type RefreshErrorHandler = () => void
 export default function apiRequest(onRefreshSuccess?: RefreshSuccessHandler, onRefreshError?: RefreshErrorHandler) {
     async function fetchDecorator<TData, TError = DefaultErrorBody>({ url, options, errorHandler }: FetchDecoratorParams<TError>): Promise<TData | undefined> {
         const response = await fetch(url, options);
-        if (response.ok) return response.json();
+        if (response.ok) {
+            if (response.status == 204) return
+            return response.json();
+        }
 
         else if (response.status !== 401) {
             const errorData = await response.json();
-            if (errorHandler) errorHandler(errorData);
-            else defaultErrorHandler(errorData);
+            if (errorHandler) errorHandler(errorData, response);
+            else defaultErrorHandler(errorData, response);
             return
         }
 
