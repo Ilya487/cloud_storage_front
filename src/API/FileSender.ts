@@ -1,4 +1,20 @@
+import apiRequest, { type DefaultErrorBody } from "./apiRequest";
 import { SERVER_URL } from "./config";
+
+type SendingStatus = 'sending' | 'cancel' | 'notRunning' | 'preparing' | 'complete' | 'canceling' | 'building'
+interface ChunkUploadResponse {
+  progress: number
+}
+interface SessionIniResponse {
+  chunkSize: number
+  chunksCount: number
+  path: string
+  sessionId: number
+}
+
+interface SessionCheckStatusResponse {
+  status: 'building' | 'complete' | 'error' | 'uploading' | 'cancelled'
+}
 
 export class FileSender {
   static STATUS_SENDING = "sending";
@@ -8,23 +24,25 @@ export class FileSender {
   static STATUS_COMPLETE = "complete";
   static STATUS_CANCELING = "canceling";
   static STATUS_BUILDING = "building";
-  private status = FileSender.STATUS_NOT_RUNNING;
+  private status: SendingStatus = 'notRunning';
   private file;
-  private destinationDirId;
-  private chunkSize;
-  private path;
+  private destinationDirId: number | null;
+  private chunkSize?: number;
+  private path?: string;
   private onChunkLoad;
   private onFileLoad;
-  private onStatusUpdate;
+  private onStatusUpdate?: (status: SendingStatus) => void;
   private onError;
-  private chunkCount;
-  private currentChunk;
-  private xhrMap = new Map();
-  private availableThreads;
-  private retriesCount;
-  private sessionId;
+  private chunkCount?: number;
+  private currentChunk?: number;
+  private abortControllers = new Set<AbortController>();
+  private availableThreads: number;
+  private retriesCount: number;
+  private sessionId?: number;
+  private serverUrl: string;
+  private apiClient = apiRequest()
 
-  constructor(file, destinationDirId = null, retriesCount = 2) {
+  constructor(file: File, destinationDirId: null | number = null, retriesCount: number = 2) {
     if (!(file instanceof File)) throw new Error("Передан не файл!");
     this.serverUrl = SERVER_URL;
     this.file = file;
@@ -33,15 +51,16 @@ export class FileSender {
   }
 
   async initialize() {
-    this.updateStatus(FileSender.STATUS_PREPARING);
+    this.updateStatus('preparing');
     this.currentChunk = 1;
     this.availableThreads = 4;
-    const { sessionId, chunkSize, chunkCount, path } = await this.sendInitializeRequest();
-    this.sessionId = sessionId;
-    this.chunkSize = chunkSize;
-    this.chunkCount = chunkCount;
-    this.path = path;
-    return sessionId;
+
+    const sessionInfo = await this.sendInitializeRequest();
+    this.sessionId = sessionInfo.sessionId;
+    this.chunkSize = sessionInfo.chunkSize;
+    this.chunkCount = sessionInfo.chunksCount;
+    this.path = sessionInfo.path;
+    return sessionInfo.sessionId;
   }
 
   start() {
@@ -49,20 +68,20 @@ export class FileSender {
       throw new Error("Сессия не инициализирована!");
     }
 
-    this.updateStatus(FileSender.STATUS_SENDING);
+    this.updateStatus('sending');
     this.sendGroupRequests();
   }
 
   async cancelSending() {
-    if (this.status !== FileSender.STATUS_SENDING && this.status !== FileSender.STATUS_BUILDING)
+    if (this.status !== 'sending' && this.status !== 'building')
       return;
-    this.updateStatus(FileSender.STATUS_CANCELING);
-    for (let xhr of this.xhrMap.keys()) {
-      xhr.abort();
-      this.xhrMap.delete(xhr);
+    this.updateStatus('canceling');
+    for (let abortController of this.abortControllers.keys()) {
+      abortController.abort();
+      this.abortControllers.delete(abortController);
     }
     await this.sendCancelRequest();
-    this.updateStatus(FileSender.STATUS_CANCEL);
+    this.updateStatus('cancel');
   }
 
   getStatus() {
@@ -74,7 +93,7 @@ export class FileSender {
   }
 
   private sendGroupRequests() {
-    if (this.status == FileSender.STATUS_CANCEL) return;
+    if (this.status == 'cancel') return;
     if (this.availableThreads < 4) return;
     const tmp = this.availableThreads;
     for (let i = 0; i < tmp; i++) {
@@ -89,32 +108,26 @@ export class FileSender {
     }
   }
 
-  private sendChunk(currentChunk) {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${this.serverUrl}/upload/chunk/${this.sessionId}`);
-    xhr.withCredentials = true;
-    xhr.setRequestHeader("X-Chunk-Num", currentChunk);
+  private async sendChunk(currentChunk: number) {
+    const abortController = new AbortController();
+    this.abortControllers.add(abortController);
 
-    xhr.send(
-      this.file.slice(this.chunkSize * (currentChunk - 1), this.chunkSize * currentChunk),
-    );
-    this.xhrMap.set(xhr, xhr);
+    const data = await this.apiClient<ChunkUploadResponse>({
+      url: `${this.serverUrl}/upload/chunk/${this.sessionId}`,
+      options: {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-Chunk-Num': currentChunk },
+        body: cutChunkFromFile(this.file, currentChunk, this.chunkSize),
+        signal: abortController.signal
+      },
+    })
 
-    return new Promise((resolve, reject) => {
-      xhr.onload = () => {
-        this.xhrMap.delete(xhr);
-        if (xhr.status >= 200 && xhr.status < 300) {
-          const result = JSON.parse(xhr.response);
-          this.onChunkLoad && this.onChunkLoad(result);
-          if (result["progress"] == 100) {
-            this.startBuild();
-          }
-          resolve();
-        } else reject();
-      };
-
-      xhr.onerror = reject;
-    });
+    this.abortControllers.delete(abortController)
+    this.onChunkLoad && this.onChunkLoad(data);
+    if (data!.progress == 100) {
+      this.startBuild();
+    }
   }
 
   private sendChunkWithRetries(chunkNum, retries) {
@@ -124,7 +137,8 @@ export class FileSender {
           this.availableThreads++;
           this.sendGroupRequests();
         })
-        .catch(() => {
+        .catch((err) => {
+          if (err.name == 'AbortError') return;
           this.sendChunkWithRetries(chunkNum, retries - 1);
         });
     } else {
@@ -133,56 +147,59 @@ export class FileSender {
     }
   }
 
-  private async sendInitializeRequest() {
-    const response = await fetch(`${this.serverUrl}/upload/init`, {
-      credentials: "include",
-      method: "POST",
-      body: JSON.stringify({
-        fileName: this.file.name,
-        fileSize: this.file.size,
-        destinationDirId: this.destinationDirId,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      this.updateStatus(FileSender.STATUS_CANCEL);
-
-      this.handleError(data.message);
+  private async sendInitializeRequest(): Promise<SessionIniResponse> {
+    const errorHandler = (errorData: DefaultErrorBody) => {
+      this.updateStatus('cancel');
+      this.handleError(errorData.message);
     }
 
-    return {
-      sessionId: data.sessionId,
-      chunkSize: data.chunkSize,
-      chunkCount: data.chunksCount,
-      path: data.path,
-    };
+    const data = await this.apiClient<SessionIniResponse>({
+      url: `${this.serverUrl}/upload/init`,
+      options: {
+        credentials: "include",
+        method: "POST",
+        body: JSON.stringify({
+          fileName: this.file.name,
+          fileSize: this.file.size,
+          destinationDirId: this.destinationDirId,
+        })
+      },
+      errorHandler,
+    });
+
+    return data;
   }
 
   private async sendCancelRequest() {
-    const response = await fetch(`${this.serverUrl}/upload/cancel/${this.sessionId}`, {
-      credentials: "include",
-      method: "DELETE",
-    });
-
-    if (!response.ok) {
+    const errorHandler = () => {
       this.handleError("Ошибка отмены запроса");
     }
+    await this.apiClient({
+      url: `${this.serverUrl}/upload/cancel/${this.sessionId}`,
+      options: {
+        credentials: "include",
+        method: "DELETE",
+      },
+      errorHandler
+    })
   }
 
   private async startBuild() {
-    this.updateStatus(FileSender.STATUS_BUILDING);
+    this.updateStatus('building');
 
-    const response = await fetch(this.serverUrl + `/upload/${this.sessionId}/build`, {
-      credentials: "include",
-      method: "POST",
-    });
-
-    if (!response.ok) {
-      this.updateStatus(FileSender.STATUS_CANCEL);
+    const errorHandler = () => {
+      this.updateStatus('cancel');
       this.handleError("Не удалось собрать файл");
     }
+
+    await this.apiClient({
+      url: `${this.serverUrl}/upload/${this.sessionId}/build`,
+      options: {
+        credentials: "include",
+        method: "POST",
+      },
+      errorHandler
+    })
 
     this.startPolling();
   }
@@ -199,22 +216,24 @@ export class FileSender {
       }
       if (status == "complete") {
         clearInterval(intervalId);
-        this.updateStatus(FileSender.STATUS_COMPLETE);
+        this.updateStatus('complete');
         this.onFileLoad && this.onFileLoad();
       }
     }, interval);
   }
 
   private async checkFileBuildingStatus() {
-    const response = await fetch(this.serverUrl + `/upload/status/${this.sessionId}`, {
-      credentials: "include",
-    });
+    const errorHandler = () => this.handleError("Не удалось собрать файл");
 
-    if (!response.ok) {
-      this.handleError("Не удалось собрать файл");
-    }
+    const data = await this.apiClient<SessionCheckStatusResponse>(
+      {
+        url: this.serverUrl + `/upload/status/${this.sessionId}`,
+        options: {
+          credentials: 'include'
+        },
+        errorHandler
+      });
 
-    const data = await response.json();
     return data.status;
   }
 
@@ -228,14 +247,18 @@ export class FileSender {
     }
   }
 
-  private handleError(data) {
+  private handleError(data): never {
     this.onError && this.onError(data);
     throw new Error();
   }
 
-  private updateStatus(status) {
+  private updateStatus(status: SendingStatus) {
     if (this.status == status) return;
     this.status = status;
     this.onStatusUpdate && this.onStatusUpdate(status);
   }
+}
+
+function cutChunkFromFile(file: File, chunkNum: number, chunkSize: number) {
+  return file.slice(chunkSize * (chunkNum - 1), chunkSize * chunkNum)
 }
