@@ -3,6 +3,7 @@ import { FileSender } from "../API/FileSender.ts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
+import { uploadsLocalStorageManager } from "../utils/uploadsLocalStorageManager";
 
 const UploadContext = createContext();
 
@@ -36,6 +37,7 @@ export const UploadProvider = ({ children }) => {
         autoClose: 2500,
       });
       addReadySession(sessionId);
+      uploadsLocalStorageManager.deleteItem(sessionId);
     };
 
     fileSender.onStatusUpdate = status => {
@@ -63,6 +65,7 @@ export const UploadProvider = ({ children }) => {
     };
 
     sessionId = await fileSender.initialize();
+    uploadsLocalStorageManager.addItem(file, sessionId);
     fileSender.start();
 
     addUploadSession({
@@ -74,6 +77,7 @@ export const UploadProvider = ({ children }) => {
       cancelUpload: async () => {
         await fileSender.cancelSending();
         cancelActiveSession(sessionId, "Отменен");
+        uploadsLocalStorageManager.deleteItem(sessionId);
       },
     });
   }
@@ -125,19 +129,19 @@ export const UploadProvider = ({ children }) => {
 
   function updateSessionProgress(id, progress) {
     setActiveUploads(uploads =>
-      uploads.map(session => (session.id == id ? { ...session, progress } : session))
+      uploads.map(session => (session.id == id ? { ...session, progress } : session)),
     );
   }
 
   function updateSessionStatus(id, newStatus) {
     setActiveUploads(uploads =>
-      uploads.map(session => (session.id == id ? { ...session, status: newStatus } : session))
+      uploads.map(session => (session.id == id ? { ...session, status: newStatus } : session)),
     );
   }
 
   function updatePreparingSessionStatus(id, newStatus) {
     setPreparingUploads(uploads =>
-      uploads.map(session => (session.id == id ? { ...session, status: newStatus } : session))
+      uploads.map(session => (session.id == id ? { ...session, status: newStatus } : session)),
     );
   }
 
