@@ -6,19 +6,21 @@ export interface FetchDecoratorParams<TError = DefaultErrorBody> {
     options?: RequestInit,
     errorHandler?: ErrorHandler<TError>,
 }
-interface DefaultErrorBody { message: string, errors?: [] }
-type ErrorHandler<T> = (errorData: T, response: Response) => void
+export interface DefaultErrorBody { message: string, errors?: [] }
+type ErrorHandler<T> = (errorData: T, response: Response) => never
 
 let refreshRequest: Promise<AuthData> | null = null;
 
 type RefreshSuccessHandler = (authData: AuthData) => void
-type RefreshErrorHandler = () => void
+type RefreshErrorHandler = () => never
 
 export default function apiRequest(onRefreshSuccess?: RefreshSuccessHandler, onRefreshError?: RefreshErrorHandler) {
-    async function fetchDecorator<TData, TError = DefaultErrorBody>({ url, options, errorHandler }: FetchDecoratorParams<TError>): Promise<TData | undefined> {
+    async function fetchDecorator<TData, TError = DefaultErrorBody>({ url, options, errorHandler }: FetchDecoratorParams<TError>): Promise<TData> {
         const response = await fetch(url, options);
         if (response.ok) {
-            if (response.status == 204) return
+            if (response.status === 204)
+                return undefined as TData;
+
             return response.json();
         }
 
@@ -26,29 +28,27 @@ export default function apiRequest(onRefreshSuccess?: RefreshSuccessHandler, onR
             const errorData = await response.json();
             if (errorHandler) errorHandler(errorData, response);
             else defaultErrorHandler(errorData, response);
-            return
         }
 
-        else if (response.status == 401) {
-            if (refreshRequest === null) refreshRequest = refreshToken()
-            try {
-                const refreshData = await refreshRequest;
-                onRefreshSuccess && onRefreshSuccess(refreshData)
-                refreshRequest = null
+        if (refreshRequest === null) refreshRequest = refreshToken()
+        try {
+            const refreshData = await refreshRequest;
+            onRefreshSuccess && onRefreshSuccess(refreshData)
+            refreshRequest = null
+            return fetchDecorator<TData, TError>({ url, options, errorHandler });
+        }
+        catch (err) {
+            refreshRequest = null
+            if (err instanceof RefreshTokenError) {
+                if (onRefreshError)
+                    onRefreshError()
+                throw err
+            }
+            else if (err instanceof ExtraRefresh) {
                 return fetchDecorator<TData, TError>({ url, options, errorHandler });
             }
-            catch (err) {
-                refreshRequest = null
-                if (err instanceof RefreshTokenError) {
-                    onRefreshError && onRefreshError()
-                    return
-                }
-                else if (err instanceof ExtraRefresh) {
-                    return fetchDecorator<TData, TError>({ url, options, errorHandler });
-                }
 
-                throw err;
-            }
+            throw err;
         }
     }
 
