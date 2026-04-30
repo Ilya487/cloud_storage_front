@@ -173,7 +173,8 @@ export const useCreateFolder = () => {
   return useMutation({
     mutationFn,
     onSuccess(_, vars) {
-      queryClient.invalidateQueries({ queryKey: ["dir", vars.parentDirId] });
+      const dirId = vars.parentDirId == "root" ? vars.parentDirId : +vars.parentDirId;
+      queryClient.invalidateQueries({ queryKey: ["dir", dirId] });
     },
   });
 };
