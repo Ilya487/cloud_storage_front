@@ -24,23 +24,21 @@ export class FileSender {
   static STATUS_COMPLETE = "complete";
   static STATUS_CANCELING = "canceling";
   static STATUS_BUILDING = "building";
+
   private status: SendingStatus = 'notRunning';
   private file;
   private destinationDirId: number | null;
-  private chunkSize?: number;
-  private path?: string;
-  private onChunkLoad;
-  private onFileLoad;
+  private onChunkLoad?: (data: ChunkUploadResponse) => void;
+  private onFileLoad?: () => void;
   private onStatusUpdate?: (status: SendingStatus) => void;
-  private onError;
-  private chunkCount?: number;
+  private onError?: (message: string) => void;
   private currentChunk?: number;
   private abortControllers = new Set<AbortController>();
   private availableThreads: number;
   private retriesCount: number;
-  private sessionId?: number;
   private serverUrl: string;
   private apiClient = apiRequest()
+  private sessionInfo?: SessionIniResponse;
 
   constructor(file: File, destinationDirId: null | number = null, retriesCount: number = 2) {
     if (!(file instanceof File)) throw new Error("Передан не файл!");
@@ -56,15 +54,13 @@ export class FileSender {
     this.availableThreads = 4;
 
     const sessionInfo = await this.sendInitializeRequest();
-    this.sessionId = sessionInfo.sessionId;
-    this.chunkSize = sessionInfo.chunkSize;
-    this.chunkCount = sessionInfo.chunksCount;
-    this.path = sessionInfo.path;
+    this.sessionInfo = sessionInfo
+
     return sessionInfo.sessionId;
   }
 
   start() {
-    if (!this.sessionId) {
+    if (!this.sessionInfo) {
       throw new Error("Сессия не инициализирована!");
     }
 
@@ -89,7 +85,7 @@ export class FileSender {
   }
 
   getPath() {
-    return this.path;
+    return this.sessionInfo.path;
   }
 
   private sendGroupRequests() {
@@ -97,7 +93,7 @@ export class FileSender {
     if (this.availableThreads < 4) return;
     const tmp = this.availableThreads;
     for (let i = 0; i < tmp; i++) {
-      if (this.currentChunk > this.chunkCount) {
+      if (this.currentChunk > this.sessionInfo?.chunksCount) {
         return;
       }
 
@@ -113,12 +109,12 @@ export class FileSender {
     this.abortControllers.add(abortController);
 
     const data = await this.apiClient<ChunkUploadResponse>({
-      url: `${this.serverUrl}/upload/chunk/${this.sessionId}`,
+      url: `${this.serverUrl}/upload/chunk/${this.sessionInfo.sessionId}`,
       options: {
         method: 'POST',
         credentials: 'include',
         headers: { 'X-Chunk-Num': currentChunk },
-        body: cutChunkFromFile(this.file, currentChunk, this.chunkSize),
+        body: cutChunkFromFile(this.file, currentChunk, this.sessionInfo.chunkSize),
         signal: abortController.signal
       },
     })
@@ -130,7 +126,7 @@ export class FileSender {
     }
   }
 
-  private sendChunkWithRetries(chunkNum, retries) {
+  private sendChunkWithRetries(chunkNum: number, retries: number) {
     if (retries > 0) {
       this.sendChunk(chunkNum)
         .then(() => {
@@ -175,7 +171,7 @@ export class FileSender {
       this.handleError("Ошибка отмены запроса");
     }
     await this.apiClient({
-      url: `${this.serverUrl}/upload/cancel/${this.sessionId}`,
+      url: `${this.serverUrl}/upload/cancel/${this.sessionInfo.sessionId}`,
       options: {
         credentials: "include",
         method: "DELETE",
@@ -193,7 +189,7 @@ export class FileSender {
     }
 
     await this.apiClient({
-      url: `${this.serverUrl}/upload/${this.sessionId}/build`,
+      url: `${this.serverUrl}/upload/${this.sessionInfo.sessionId}/build`,
       options: {
         credentials: "include",
         method: "POST",
@@ -227,7 +223,7 @@ export class FileSender {
 
     const data = await this.apiClient<SessionCheckStatusResponse>(
       {
-        url: this.serverUrl + `/upload/status/${this.sessionId}`,
+        url: this.serverUrl + `/upload/status/${this.sessionInfo.sessionId}`,
         options: {
           credentials: 'include'
         },
@@ -247,8 +243,8 @@ export class FileSender {
     }
   }
 
-  private handleError(data): never {
-    this.onError && this.onError(data);
+  private handleError(message: string): never {
+    this.onError && this.onError(message);
     throw new Error();
   }
 
