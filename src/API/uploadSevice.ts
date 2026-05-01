@@ -29,32 +29,28 @@ export async function restoreSessionsInfo(ids: number[]): Promise<RestoreUploadS
 
 export async function cancelSessions(ids: number[]): Promise<CancelSessionRes[]> {
     const requests: Promise<CancelSessionRes>[] = [];
-    ids.forEach(id => requests.push(cancelSession(id)))
+    ids.forEach(id => requests.push(cancelSession(id)));
 
-    const requestResults = await Promise.all(requests)
+    const requestResults = await Promise.all(requests);
     return requestResults;
 }
 
 export interface CancelSessionRes {
     id: number,
-    res: boolean
+    res: boolean;
 }
 async function cancelSession(id: number): Promise<CancelSessionRes> {
     const api = apiRequest();
-    const res = { id, res: true }
+    const res = { id, res: true };
     try {
         await api<{}>({
             url: SERVER_URL + '/upload/cancel/' + id,
             options: { credentials: "include", method: 'DELETE' },
-            errorHandler(_, response) {
-                if (response.status >= 500)
-                    res.res = false
-            },
-        })
+        });
     } catch (err) {
-        res.res = false
+        res.res = false;
     }
     finally {
-        return res
+        return res;
     }
 }

@@ -50,6 +50,8 @@ export const UploadProvider = ({ children }) => {
         });
       } else if (status == FileSender.STATUS_CANCEL && !sessionId) {
         updatePreparingSessionStatus(generatedKey, status);
+      } else if (status == "cancel") {
+        uploadsLocalStorageManager.deleteItem(sessionId);
       } else if (status == FileSender.STATUS_BUILDING) {
         updateSessionStatus(sessionId, status);
       } else {

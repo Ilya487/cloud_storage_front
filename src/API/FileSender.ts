@@ -1,19 +1,19 @@
 import apiRequest, { type DefaultErrorBody } from "./apiRequest";
 import { SERVER_URL } from "./config";
 
-type SendingStatus = 'sending' | 'cancel' | 'notRunning' | 'preparing' | 'complete' | 'canceling' | 'building'
+type SendingStatus = 'sending' | 'cancel' | 'notRunning' | 'preparing' | 'complete' | 'canceling' | 'building';
 interface ChunkUploadResponse {
-  progress: number
+  progress: number;
 }
 interface SessionIniResponse {
-  chunkSize: number
-  chunksCount: number
-  path: string
-  sessionId: number
+  chunkSize: number;
+  chunksCount: number;
+  path: string;
+  sessionId: number;
 }
 
 interface SessionCheckStatusResponse {
-  status: 'building' | 'complete' | 'error' | 'uploading' | 'cancelled'
+  status: 'building' | 'complete' | 'error' | 'uploading' | 'cancelled';
 }
 
 export class FileSender {
@@ -25,20 +25,19 @@ export class FileSender {
   static STATUS_CANCELING = "canceling";
   static STATUS_BUILDING = "building";
 
+  public onChunkLoad?: (data: ChunkUploadResponse) => void;
+  public onFileLoad?: () => void;
+  public onStatusUpdate?: (status: SendingStatus) => void;
+  public onError?: (message: string) => void;
+
   private status: SendingStatus = 'notRunning';
   private file;
   private destinationDirId: number | null;
-  private onChunkLoad?: (data: ChunkUploadResponse) => void;
-  private onFileLoad?: () => void;
-  private onStatusUpdate?: (status: SendingStatus) => void;
-  private onError?: (message: string) => void;
-  private currentChunk?: number;
-  private abortControllers = new Set<AbortController>();
-  private availableThreads: number;
   private retriesCount: number;
   private serverUrl: string;
-  private apiClient = apiRequest()
+  private apiClient = apiRequest();
   private sessionInfo?: SessionIniResponse;
+  private chunkSender?: ChunkSender;
 
   constructor(file: File, destinationDirId: null | number = null, retriesCount: number = 2) {
     if (!(file instanceof File)) throw new Error("Передан не файл!");
@@ -50,11 +49,8 @@ export class FileSender {
 
   async initialize() {
     this.updateStatus('preparing');
-    this.currentChunk = 1;
-    this.availableThreads = 4;
-
     const sessionInfo = await this.sendInitializeRequest();
-    this.sessionInfo = sessionInfo
+    this.sessionInfo = sessionInfo;
 
     return sessionInfo.sessionId;
   }
@@ -65,17 +61,33 @@ export class FileSender {
     }
 
     this.updateStatus('sending');
-    this.sendGroupRequests();
+
+    const chunkSender = new ChunkSender({
+      file: this.file,
+      requestsPerRun: 4,
+      serverUrl: this.serverUrl,
+      sessionInfo: this.sessionInfo,
+      retriesCount: this.retriesCount
+    });
+    this.chunkSender = chunkSender;
+
+    chunkSender.onChunkLoad = data => this.onChunkLoad && this.onChunkLoad(data);
+    chunkSender.onComplete = () => this.startBuild();
+    chunkSender.onError = () => {
+      this.cancelSending();
+      this.handleError("Ошибка загрузки файла");
+    };
+    chunkSender.start();
   }
 
   async cancelSending() {
     if (this.status !== 'sending' && this.status !== 'building')
       return;
+
     this.updateStatus('canceling');
-    for (let abortController of this.abortControllers.keys()) {
-      abortController.abort();
-      this.abortControllers.delete(abortController);
-    }
+
+    this.chunkSender?.cancelSending();
+
     await this.sendCancelRequest();
     this.updateStatus('cancel');
   }
@@ -88,66 +100,11 @@ export class FileSender {
     return this.sessionInfo.path;
   }
 
-  private sendGroupRequests() {
-    if (this.status == 'cancel') return;
-    if (this.availableThreads < 4) return;
-    const tmp = this.availableThreads;
-    for (let i = 0; i < tmp; i++) {
-      if (this.currentChunk > this.sessionInfo?.chunksCount) {
-        return;
-      }
-
-      this.sendChunkWithRetries(this.currentChunk, this.retriesCount);
-
-      this.currentChunk++;
-      this.availableThreads--;
-    }
-  }
-
-  private async sendChunk(currentChunk: number) {
-    const abortController = new AbortController();
-    this.abortControllers.add(abortController);
-
-    const data = await this.apiClient<ChunkUploadResponse>({
-      url: `${this.serverUrl}/upload/chunk/${this.sessionInfo.sessionId}`,
-      options: {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'X-Chunk-Num': currentChunk },
-        body: cutChunkFromFile(this.file, currentChunk, this.sessionInfo.chunkSize),
-        signal: abortController.signal
-      },
-    })
-
-    this.abortControllers.delete(abortController)
-    this.onChunkLoad && this.onChunkLoad(data);
-    if (data!.progress == 100) {
-      this.startBuild();
-    }
-  }
-
-  private sendChunkWithRetries(chunkNum: number, retries: number) {
-    if (retries > 0) {
-      this.sendChunk(chunkNum)
-        .then(() => {
-          this.availableThreads++;
-          this.sendGroupRequests();
-        })
-        .catch((err) => {
-          if (err.name == 'AbortError') return;
-          this.sendChunkWithRetries(chunkNum, retries - 1);
-        });
-    } else {
-      this.cancelSending();
-      this.handleError("Ошибка загрузки файла");
-    }
-  }
-
   private async sendInitializeRequest(): Promise<SessionIniResponse> {
     const errorHandler = (errorData: DefaultErrorBody) => {
       this.updateStatus('cancel');
       this.handleError(errorData.message);
-    }
+    };
 
     const data = await this.apiClient<SessionIniResponse>({
       url: `${this.serverUrl}/upload/init`,
@@ -169,7 +126,7 @@ export class FileSender {
   private async sendCancelRequest() {
     const errorHandler = () => {
       this.handleError("Ошибка отмены запроса");
-    }
+    };
     await this.apiClient({
       url: `${this.serverUrl}/upload/cancel/${this.sessionInfo.sessionId}`,
       options: {
@@ -177,7 +134,7 @@ export class FileSender {
         method: "DELETE",
       },
       errorHandler
-    })
+    });
   }
 
   private async startBuild() {
@@ -186,7 +143,7 @@ export class FileSender {
     const errorHandler = () => {
       this.updateStatus('cancel');
       this.handleError("Не удалось собрать файл");
-    }
+    };
 
     await this.apiClient({
       url: `${this.serverUrl}/upload/${this.sessionInfo.sessionId}/build`,
@@ -195,7 +152,7 @@ export class FileSender {
         method: "POST",
       },
       errorHandler
-    })
+    });
 
     this.startPolling();
   }
@@ -256,5 +213,110 @@ export class FileSender {
 }
 
 function cutChunkFromFile(file: File, chunkNum: number, chunkSize: number) {
-  return file.slice(chunkSize * (chunkNum - 1), chunkSize * chunkNum)
+  return file.slice(chunkSize * (chunkNum - 1), chunkSize * chunkNum);
+}
+
+interface ChunkSenderConstruct {
+  sessionInfo: SessionIniResponse,
+  requestsPerRun: number,
+  file: File,
+  serverUrl: string,
+  retriesCount?: number;
+}
+
+class ChunkSender {
+  public onChunkLoad?: (data: ChunkUploadResponse) => void;
+  public onComplete?: () => void;
+  public onError?: () => void;
+
+  private file: File;
+  private currentChunk: number = 1;
+  private abortControllers = new Set<AbortController>();
+  private requestsPerRun: number;
+  private retriesCount: number;
+  private serverUrl: string;
+  private sessionInfo: SessionIniResponse;
+  private apiClient = apiRequest();
+  private availableRequests: number;
+  private isCancel = false;
+
+  constructor({ sessionInfo, requestsPerRun, file, serverUrl, retriesCount = 1 }: ChunkSenderConstruct) {
+    this.serverUrl = serverUrl;
+    this.file = file;
+    this.requestsPerRun = requestsPerRun;
+    this.availableRequests = requestsPerRun;
+    this.serverUrl = serverUrl;
+    this.sessionInfo = sessionInfo;
+    this.retriesCount = retriesCount;
+  }
+
+  start() {
+    this.sendGroupRequests();
+  }
+
+  cancelSending() {
+    this.isCancel = true;
+    for (let abortController of this.abortControllers.keys()) {
+      abortController.abort();
+      this.abortControllers.delete(abortController);
+    }
+  }
+
+  private sendGroupRequests() {
+    if (this.isCancel) return;
+    if (this.availableRequests < this.requestsPerRun) return;
+    const tmp = this.availableRequests;
+    for (let i = 0; i < tmp; i++) {
+      if (this.currentChunk > this.sessionInfo.chunksCount) {
+        return;
+      }
+
+      this.sendChunkWithRetries(this.currentChunk, this.retriesCount).then(() => {
+        this.availableRequests++;
+        this.sendGroupRequests();
+      });
+
+      this.currentChunk++;
+      this.availableRequests--;
+    }
+  }
+
+  private async sendChunkWithRetries(chunkNum: number, retries: number) {
+    if (retries == 0) {
+      this.onError?.();
+      return;
+    }
+
+    try {
+      const data = await this.sendChunk(chunkNum);
+      this.onChunkLoad && this.onChunkLoad(data);
+      if (data.progress == 100) {
+        this.onComplete && this.onComplete();
+      }
+
+    } catch (error) {
+      if (error instanceof Error && error.name == 'AbortError')
+        return;
+      this.sendChunkWithRetries(chunkNum, retries - 1);
+    }
+  }
+
+  private async sendChunk(chunkNum: number) {
+    const abortController = new AbortController();
+    this.abortControllers.add(abortController);
+
+    const data = await this.apiClient<ChunkUploadResponse>({
+      url: `${this.serverUrl}/upload/chunk/${this.sessionInfo.sessionId}`,
+      options: {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-Chunk-Num': chunkNum },
+        body: cutChunkFromFile(this.file, chunkNum, this.sessionInfo.chunkSize),
+        signal: abortController.signal
+      },
+    });
+
+    this.abortControllers.delete(abortController);
+    return data;
+  }
 }
