@@ -67,7 +67,8 @@ export class FileSender {
       requestsPerRun: 4,
       serverUrl: this.serverUrl,
       sessionInfo: this.sessionInfo,
-      retriesCount: this.retriesCount
+      retriesCount: this.retriesCount,
+      chunkSelector: new SequentialChunkSelector(this.sessionInfo.chunksCount)
     });
     this.chunkSender = chunkSender;
 
@@ -212,15 +213,12 @@ export class FileSender {
   }
 }
 
-function cutChunkFromFile(file: File, chunkNum: number, chunkSize: number) {
-  return file.slice(chunkSize * (chunkNum - 1), chunkSize * chunkNum);
-}
-
 interface ChunkSenderConstruct {
   sessionInfo: SessionIniResponse,
   requestsPerRun: number,
   file: File,
   serverUrl: string,
+  chunkSelector: ChunkSelectStrategy;
   retriesCount?: number;
 }
 
@@ -230,7 +228,6 @@ class ChunkSender {
   public onError?: () => void;
 
   private file: File;
-  private currentChunk: number = 1;
   private abortControllers = new Set<AbortController>();
   private requestsPerRun: number;
   private retriesCount: number;
@@ -239,8 +236,9 @@ class ChunkSender {
   private apiClient = apiRequest();
   private availableRequests: number;
   private isCancel = false;
+  private chunkSelector: ChunkSelectStrategy;
 
-  constructor({ sessionInfo, requestsPerRun, file, serverUrl, retriesCount = 1 }: ChunkSenderConstruct) {
+  constructor({ sessionInfo, requestsPerRun, file, serverUrl, chunkSelector, retriesCount = 1 }: ChunkSenderConstruct) {
     this.serverUrl = serverUrl;
     this.file = file;
     this.requestsPerRun = requestsPerRun;
@@ -248,6 +246,7 @@ class ChunkSender {
     this.serverUrl = serverUrl;
     this.sessionInfo = sessionInfo;
     this.retriesCount = retriesCount;
+    this.chunkSelector = chunkSelector;
   }
 
   start() {
@@ -267,16 +266,14 @@ class ChunkSender {
     if (this.availableRequests < this.requestsPerRun) return;
     const tmp = this.availableRequests;
     for (let i = 0; i < tmp; i++) {
-      if (this.currentChunk > this.sessionInfo.chunksCount) {
-        return;
-      }
+      const nextChunk = this.chunkSelector.next();
+      if (!nextChunk) return;
 
-      this.sendChunkWithRetries(this.currentChunk, this.retriesCount).then(() => {
+      this.sendChunkWithRetries(nextChunk, this.retriesCount).then(() => {
         this.availableRequests++;
         this.sendGroupRequests();
       });
 
-      this.currentChunk++;
       this.availableRequests--;
     }
   }
@@ -311,12 +308,35 @@ class ChunkSender {
         method: 'POST',
         credentials: 'include',
         headers: { 'X-Chunk-Num': chunkNum },
-        body: cutChunkFromFile(this.file, chunkNum, this.sessionInfo.chunkSize),
+        body: this.cutChunkFromFile(this.file, chunkNum, this.sessionInfo.chunkSize),
         signal: abortController.signal
       },
     });
 
     this.abortControllers.delete(abortController);
     return data;
+  }
+
+  private cutChunkFromFile(file: File, chunkNum: number, chunkSize: number) {
+    return file.slice(chunkSize * (chunkNum - 1), chunkSize * chunkNum);
+  }
+}
+
+interface ChunkSelectStrategy {
+  next: () => number | false;
+}
+
+class SequentialChunkSelector implements ChunkSelectStrategy {
+  private current: number = 1;
+  private total: number;
+
+  constructor(total: number) {
+    this.total = total;
+  }
+
+  next(): number | false {
+    const next = this.current++;
+    if (next > this.total) return false;
+    return next;
   }
 }
