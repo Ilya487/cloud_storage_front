@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import ContextMenu from "../ContextMenu/ContextMenu";
 import CreateFolderDialog from "../CreateFolderDialog/CreateFolderDialog";
-import { useUpload } from "../../context/UploadContext";
+import { useUpload } from "../../context/UploadContext.tsx";
 import { useNavigate } from "react-router";
 import useMenuActions from "./useMenuActions";
 

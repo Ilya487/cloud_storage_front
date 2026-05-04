@@ -3,7 +3,7 @@ import { FileSender } from "../API/FileSender.ts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
-import { uploadsLocalStorageManager } from "../utils/uploadsLocalStorageManager";
+import { uploadsLocalStorageManager } from "../utils/uploadsLocalStorageManager.ts";
 
 const UploadContext = createContext();
 
@@ -22,7 +22,7 @@ export const UploadProvider = ({ children }) => {
   }
 
   async function createUploadSession(file, destinationDirId) {
-    const fileSender = new FileSender(file, destinationDirId);
+    const fileSender = new FileSender({ file, destinationDirId });
     const generatedKey = file.name + Date.now();
     let sessionId;
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUpload } from "../context/UploadContext";
+import { useUpload } from "../context/UploadContext.tsx";
 import { useNavigate } from "react-router";
 
 const useFileDrop = dirId => {

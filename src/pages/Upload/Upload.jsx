@@ -1,7 +1,7 @@
 import CanceledUpload from "../../Components/UploadItem/CanceledUpload";
 import PreparingUpload from "../../Components/UploadItem/PreparingUpload";
 import UploadingItem from "../../Components/UploadItem/UploadingItem";
-import { useUpload } from "../../context/UploadContext";
+import { useUpload } from "../../context/UploadContext.tsx";
 import styles from "./Upload.module.css";
 
 const Upload = () => {

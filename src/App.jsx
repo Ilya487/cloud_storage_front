@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import Catalog from "./pages/Catalog/Catalog";
 import Layout from "./Components/Layout/Layout";
-import { UploadProvider } from "./context/UploadContext";
+import { UploadProvider } from "./context/UploadContext.tsx";
 import Upload from "./pages/Upload/Upload";
 import { ToastContainer } from "react-toastify";
 import PrivateRoute from "./routing/PrivateRoute";
