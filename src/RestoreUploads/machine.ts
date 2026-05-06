@@ -21,6 +21,8 @@ type Context = {
     restoreResponse: RestoreUploadSessionResponse[];
     unrestoredUploads: UploadRestoringInfo[];
     cancelResponse: CancelSessionRes[];
+    dataForResumeUpload: UploadResumeData[];
+    sessionsForCancel: number[];
 };
 
 export type SelectFilesEvent = {
@@ -155,20 +157,16 @@ export const restoringSessionsStateMachine = createMachine(
         finishing: state(
             immediate(
                 "exit",
-                action<Context, unknown>(ctx => {
+                reduce<Context, unknown>(ctx => {
                     const successRestore = ctx.restoreResponse.filter(r => r.res);
                     if (successRestore.length == 0) {
-                        console.log("CANT START LOADING");
-
-                        return;
+                        return ctx;
                     }
 
-                    const dataForStartLoading = successRestore.map(val => {
-                        return { ...val, file: ctx.matchResult?.sessionIdFileMap.get(val.id) };
+                    const dataForResumeUpload: UploadResumeData[] = successRestore.map(val => {
+                        return { ...val, file: ctx.matchResult?.sessionIdFileMap.get(val.id) as File };
                     });
-
-                    //начало загрузки
-                    console.log("FINISHING", dataForStartLoading);
+                    return { ...ctx, dataForResumeUpload };
                 }),
             ),
         ),
