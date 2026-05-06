@@ -346,7 +346,7 @@ class SequentialChunkSelector implements ChunkSelectStrategy {
   }
 
   hasNext() {
-    if (this.current >= this.total) return false;
+    if (this.current > this.total) return false;
     else return true;
   }
 }

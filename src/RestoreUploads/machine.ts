@@ -9,7 +9,7 @@ import {
 } from "../API/uploadSevice.js";
 import { action, createMachine, guard, immediate, invoke, reduce, state, transition } from "robot3";
 import matchFilesWithSessions from "./matchFilesWithSessions.js";
-import type { MatchesResult, UploadRestoringInfo } from "./types.js";
+import type { MatchesResult, UploadRestoringInfo, UploadResumeData } from "./types.js";
 
 const events = ["finish", "exit", "selectFiles", "back", "continue", "confirm", "cancel"] as const;
 export type MachineEvent = (typeof events)[number];
@@ -46,6 +46,8 @@ const context = (): Context => ({
     unrestoredUploads: [],
     cancelResponse: [],
     restoreResponse: [],
+    dataForResumeUpload: [],
+    sessionsForCancel: []
 });
 
 const selectFilesTransition = () =>
@@ -71,6 +73,22 @@ const selectFilesTransition = () =>
         }),
     );
 
+const cancelRequestActions = {
+    updateCancelResponseData() {
+        return reduce<Context, DoneCancelSessionsRequestEvent>((ctx, ev) => ({
+            ...ctx,
+            cancelResponse: ev.data,
+        }));
+    },
+    deleteSessionsFromLocalStorageAction() {
+        return action<Context, unknown>(ctx =>
+            ctx.cancelResponse.forEach(
+                res => res.res && uploadsLocalStorageManager.deleteItem(res.id),
+            ),
+        );
+    }
+};
+
 export const restoringSessionsStateMachine = createMachine(
     {
         start: state(
@@ -95,10 +113,24 @@ export const restoringSessionsStateMachine = createMachine(
             selectFilesTransition(),
             transition("continue", "confirmingContinue"),
         ),
-        confirmingExit: state(transition("exit", "cancelingSessions"), transition("back", "start")),
+        confirmingExit: state(
+            transition(
+                "exit",
+                "cancelingSessions",
+                reduce<Context, unknown>(ctx => ({
+                    ...ctx, sessionsForCancel: ctx.uploadsList.map(u => u.sessionId)
+                }))),
+            transition("back", "start")
+        ),
         confirmingContinue: state(
             transition("back", "start"),
-            transition("confirm", "loadingSessionsInfo"),
+            transition(
+                "confirm",
+                "cancelingSessionsAfterContinue",
+                reduce<Context, unknown>(ctx => ({
+                    ...ctx, sessionsForCancel: ctx.uploadsList.filter(u => u.reason).map(u => u.sessionId)
+                }))
+            ),
         ),
         loadingSessionsInfo: invoke(
             requestSessionsInfo,
@@ -136,22 +168,27 @@ export const restoringSessionsStateMachine = createMachine(
                 "finishing",
                 guard<Context, unknown>(ctx => ctx.unrestoredUploads.length == 0),
             ),
-            transition("confirm", "cancelingSessions"),
+            transition("confirm", "cancelingSessions", reduce<Context, unknown>(ctx => {
+                const sessionsForCancel = ctx.restoreResponse.filter(r => !r.res).map(u => u.id);
+                return { ...ctx, sessionsForCancel };
+            })),
+        ),
+        cancelingSessionsAfterContinue: invoke(
+            cancelSessions,
+            transition(
+                "done",
+                "loadingSessionsInfo",
+                cancelRequestActions.updateCancelResponseData(),
+                cancelRequestActions.deleteSessionsFromLocalStorageAction()
+            ),
         ),
         cancelingSessions: invoke(
             cancelSessions,
             transition(
                 "done",
                 "finishing",
-                reduce<Context, DoneCancelSessionsRequestEvent>((ctx, ev) => ({
-                    ...ctx,
-                    cancelResponse: ev.data,
-                })),
-                action<Context, unknown>(ctx =>
-                    ctx.cancelResponse.forEach(
-                        res => res.res && uploadsLocalStorageManager.deleteItem(res.id),
-                    ),
-                ),
+                cancelRequestActions.updateCancelResponseData(),
+                cancelRequestActions.deleteSessionsFromLocalStorageAction()
             ),
         ),
         finishing: state(
@@ -183,18 +220,6 @@ async function requestSessionsInfo(ctx: Context) {
 }
 
 async function cancelSessions(ctx: Context) {
-    const ids = getSessionsIdsForCancel(ctx);
-    const res = await cancelSessionsRequest(ids);
+    const res = await cancelSessionsRequest(ctx.sessionsForCancel);
     return res;
-}
-
-function getSessionsIdsForCancel(ctx: Context): number[] {
-    let ids: number[] = [];
-    if (ctx.unrestoredUploads.length != 0) {
-        ids = ctx.unrestoredUploads.map(u => u.sessionId);
-    } else {
-        ids = ctx.uploadsList.map(u => u.sessionId);
-    }
-
-    return ids;
 }
