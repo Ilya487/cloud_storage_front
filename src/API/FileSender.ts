@@ -1,3 +1,4 @@
+import type { UploadResumeData } from "../RestoreUploads/types";
 import apiRequest, { type DefaultErrorBody } from "./apiRequest";
 import { SERVER_URL } from "./config";
 
@@ -16,6 +17,17 @@ interface SessionCheckStatusResponse {
   status: 'building' | 'complete' | 'error' | 'uploading' | 'cancelled';
 }
 
+type FileSenderConstruct =
+  | {
+    file: File,
+    destinationDirId: number | 'root';
+    retriesCount: number;
+  }
+  | {
+    resumeData: UploadResumeData,
+    retriesCount: number;
+  };
+
 export class FileSender {
   static STATUS_SENDING = "sending";
   static STATUS_CANCEL = "cancel";
@@ -31,54 +43,59 @@ export class FileSender {
   public onError?: (message: string) => void;
 
   private status: SendingStatus = 'notRunning';
-  private file;
-  private destinationDirId: number | null;
+  private file: File;
+  private destinationDirId: number | "root";
   private retriesCount: number;
-  private serverUrl: string;
+  private serverUrl: string = SERVER_URL;
   private apiClient = apiRequest();
   private sessionInfo?: SessionIniResponse;
   private chunkSender?: ChunkSender;
 
-  constructor(file: File, destinationDirId: null | number = null, retriesCount: number = 2) {
-    if (!(file instanceof File)) throw new Error("Передан не файл!");
-    this.serverUrl = SERVER_URL;
-    this.file = file;
-    this.retriesCount = retriesCount;
-    this.destinationDirId = destinationDirId;
+  constructor(params: FileSenderConstruct) {
+    if ('resumeData' in params) {
+      this.sessionInfo = {
+        chunksCount: params.resumeData.chunksCount,
+        chunkSize: params.resumeData.chunkSize,
+        path: params.resumeData.path,
+        sessionId: params.resumeData.id,
+      };
+
+      this.file = params.resumeData.file;
+      this.retriesCount = params.retriesCount;
+      this.destinationDirId = params.resumeData.destinationDirId;
+
+      this.chunkSender = this.createChunkSender(new ResumedChunkSelector(params.resumeData.readyChunks, params.resumeData.chunksCount));
+    }
+    else {
+      this.file = params.file;
+      this.retriesCount = params.retriesCount;
+      this.destinationDirId = params.destinationDirId;
+      this.retriesCount = params.retriesCount;
+    }
   }
 
   async initialize() {
+    if (this.status == 'preparing')
+      throw new Error('Инициализация уже запущена');
+    if (this.sessionInfo)
+      throw new Error('Сессия уже инициализирована');
+
     this.updateStatus('preparing');
     const sessionInfo = await this.sendInitializeRequest();
     this.sessionInfo = sessionInfo;
+    this.chunkSender = this.createChunkSender(new SequentialChunkSelector(this.sessionInfo.chunksCount));
 
     return sessionInfo.sessionId;
   }
 
   start() {
-    if (!this.sessionInfo) {
+    if (!this.sessionInfo || !this.chunkSender) {
       throw new Error("Сессия не инициализирована!");
     }
 
     this.updateStatus('sending');
 
-    const chunkSender = new ChunkSender({
-      file: this.file,
-      requestsPerRun: 4,
-      serverUrl: this.serverUrl,
-      sessionInfo: this.sessionInfo,
-      retriesCount: this.retriesCount,
-      chunkSelector: new SequentialChunkSelector(this.sessionInfo.chunksCount)
-    });
-    this.chunkSender = chunkSender;
-
-    chunkSender.onChunkLoad = data => this.onChunkLoad && this.onChunkLoad(data);
-    chunkSender.onComplete = () => this.startBuild();
-    chunkSender.onError = () => {
-      this.cancelSending();
-      this.handleError("Ошибка загрузки файла");
-    };
-    chunkSender.start();
+    this.chunkSender.start();
   }
 
   async cancelSending() {
@@ -98,7 +115,32 @@ export class FileSender {
   }
 
   getPath() {
+    if (!this.sessionInfo)
+      throw new Error('Сначала нужно инициализировать сессию загрузки');
     return this.sessionInfo.path;
+  }
+
+  private createChunkSender(chunkSelector: ChunkSelectStrategy) {
+    if (!this.sessionInfo)
+      throw new Error('Сначала нужно инициализировать сессию загрузки');
+
+    const chunkSender = new ChunkSender({
+      file: this.file,
+      requestsPerRun: 4,
+      serverUrl: this.serverUrl,
+      sessionInfo: this.sessionInfo,
+      retriesCount: this.retriesCount,
+      chunkSelector,
+    });
+
+    chunkSender.onChunkLoad = data => this.onChunkLoad && this.onChunkLoad(data);
+    chunkSender.onComplete = () => this.startBuild();
+    chunkSender.onError = () => {
+      this.cancelSending();
+      this.handleError("Ошибка загрузки файла");
+    };
+
+    return chunkSender;
   }
 
   private async sendInitializeRequest(): Promise<SessionIniResponse> {
@@ -129,7 +171,7 @@ export class FileSender {
       this.handleError("Ошибка отмены запроса");
     };
     await this.apiClient({
-      url: `${this.serverUrl}/upload/cancel/${this.sessionInfo.sessionId}`,
+      url: `${this.serverUrl}/upload/cancel/${this.sessionInfo!.sessionId}`,
       options: {
         credentials: "include",
         method: "DELETE",
@@ -147,7 +189,7 @@ export class FileSender {
     };
 
     await this.apiClient({
-      url: `${this.serverUrl}/upload/${this.sessionInfo.sessionId}/build`,
+      url: `${this.serverUrl}/upload/${this.sessionInfo!.sessionId}/build`,
       options: {
         credentials: "include",
         method: "POST",
@@ -181,7 +223,7 @@ export class FileSender {
 
     const data = await this.apiClient<SessionCheckStatusResponse>(
       {
-        url: this.serverUrl + `/upload/status/${this.sessionInfo.sessionId}`,
+        url: this.serverUrl + `/upload/status/${this.sessionInfo!.sessionId}`,
         options: {
           credentials: 'include'
         },
@@ -311,7 +353,7 @@ class ChunkSender {
       options: {
         method: 'POST',
         credentials: 'include',
-        headers: { 'X-Chunk-Num': chunkNum },
+        headers: { 'X-Chunk-Num': String(chunkNum) },
         body: this.cutChunkFromFile(this.file, chunkNum, this.sessionInfo.chunkSize),
         signal: abortController.signal
       },
