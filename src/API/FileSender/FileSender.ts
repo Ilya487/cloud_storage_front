@@ -1,20 +1,20 @@
-import type { UploadResumeData } from "../RestoreUploads/types";
-import apiRequest, { type DefaultErrorBody } from "./apiRequest";
-import { SERVER_URL } from "./config";
+import type { UploadResumeData } from "../../RestoreUploads/types";
+import apiRequest, { type DefaultErrorBody } from "../apiRequest";
+import { SERVER_URL } from "../config";
+import { ResumedChunkSelector, SequentialChunkSelector, type ChunkSelectStrategy } from "./ChunkSelectStrategy";
+import { ChunkSender, type ChunkUploadResponse } from "./ChunkSender";
 
 type SendingStatus = 'sending' | 'cancel' | 'notRunning' | 'preparing' | 'complete' | 'canceling' | 'building';
-interface ChunkUploadResponse {
-  progress: number;
+
+interface SessionCheckStatusResponse {
+  status: 'building' | 'complete' | 'error' | 'uploading' | 'cancelled';
 }
-interface SessionIniResponse {
+
+export interface SessionIniResponse {
   chunkSize: number;
   chunksCount: number;
   path: string;
   sessionId: number;
-}
-
-interface SessionCheckStatusResponse {
-  status: 'building' | 'complete' | 'error' | 'uploading' | 'cancelled';
 }
 
 type FileSenderConstruct =
@@ -252,174 +252,5 @@ export class FileSender {
     if (this.status == status) return;
     this.status = status;
     this.onStatusUpdate && this.onStatusUpdate(status);
-  }
-}
-
-interface ChunkSenderConstruct {
-  sessionInfo: SessionIniResponse,
-  requestsPerRun: number,
-  file: File,
-  serverUrl: string,
-  chunkSelector: ChunkSelectStrategy;
-  retriesCount?: number;
-}
-
-class ChunkSender {
-  public onChunkLoad?: (data: ChunkUploadResponse) => void;
-  public onComplete?: () => void;
-  public onError?: () => void;
-
-  private file: File;
-  private abortControllers = new Set<AbortController>();
-  private requestsPerRun: number;
-  private retriesCount: number;
-  private serverUrl: string;
-  private sessionInfo: SessionIniResponse;
-  private apiClient = apiRequest();
-  private availableRequests: number;
-  private isCancel = false;
-  private chunkSelector: ChunkSelectStrategy;
-
-  constructor({ sessionInfo, requestsPerRun, file, serverUrl, chunkSelector, retriesCount = 1 }: ChunkSenderConstruct) {
-    this.serverUrl = serverUrl;
-    this.file = file;
-    this.requestsPerRun = requestsPerRun;
-    this.availableRequests = requestsPerRun;
-    this.serverUrl = serverUrl;
-    this.sessionInfo = sessionInfo;
-    this.retriesCount = retriesCount;
-    this.chunkSelector = chunkSelector;
-  }
-
-  start() {
-    if (!this.chunkSelector.hasNext()) {
-      this.onComplete && this.onComplete();
-    }
-    else
-      this.sendGroupRequests();
-  }
-
-  cancelSending() {
-    this.isCancel = true;
-    for (let abortController of this.abortControllers.keys()) {
-      abortController.abort();
-      this.abortControllers.delete(abortController);
-    }
-  }
-
-  private sendGroupRequests() {
-    if (this.isCancel) return;
-    if (this.availableRequests < this.requestsPerRun) return;
-    const tmp = this.availableRequests;
-    for (let i = 0; i < tmp; i++) {
-      const nextChunk = this.chunkSelector.next();
-      if (!nextChunk) return;
-
-      this.sendChunkWithRetries(nextChunk, this.retriesCount).then(() => {
-        this.availableRequests++;
-        this.sendGroupRequests();
-      });
-
-      this.availableRequests--;
-    }
-  }
-
-  private async sendChunkWithRetries(chunkNum: number, retries: number) {
-    if (retries == 0) {
-      this.onError?.();
-      return;
-    }
-
-    try {
-      const data = await this.sendChunk(chunkNum);
-      this.onChunkLoad && this.onChunkLoad(data);
-      if (data.progress == 100) {
-        this.onComplete && this.onComplete();
-      }
-
-    } catch (error) {
-      if (error instanceof Error && error.name == 'AbortError')
-        return;
-      this.sendChunkWithRetries(chunkNum, retries - 1);
-    }
-  }
-
-  private async sendChunk(chunkNum: number) {
-    const abortController = new AbortController();
-    this.abortControllers.add(abortController);
-
-    const data = await this.apiClient<ChunkUploadResponse>({
-      url: `${this.serverUrl}/upload/chunk/${this.sessionInfo.sessionId}`,
-      options: {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'X-Chunk-Num': String(chunkNum) },
-        body: this.cutChunkFromFile(this.file, chunkNum, this.sessionInfo.chunkSize),
-        signal: abortController.signal
-      },
-    });
-
-    this.abortControllers.delete(abortController);
-    return data;
-  }
-
-  private cutChunkFromFile(file: File, chunkNum: number, chunkSize: number) {
-    return file.slice(chunkSize * (chunkNum - 1), chunkSize * chunkNum);
-  }
-}
-
-interface ChunkSelectStrategy {
-  next: () => number | false;
-  hasNext: () => boolean;
-}
-
-class SequentialChunkSelector implements ChunkSelectStrategy {
-  private current: number = 1;
-  private total: number;
-
-  constructor(total: number) {
-    this.total = total;
-  }
-
-  next(): number | false {
-    const next = this.current++;
-    if (next > this.total) return false;
-    return next;
-  }
-
-  hasNext() {
-    if (this.current > this.total) return false;
-    else return true;
-  }
-}
-
-class ResumedChunkSelector implements ChunkSelectStrategy {
-  private notReadyChunks: number[];
-  private currentIndex: number = 0;
-
-  constructor(readyChunks: number[], chunksCount: number) {
-    this.notReadyChunks = this.getNotReadyChunks(readyChunks, chunksCount);
-  }
-
-  next() {
-    const nextIndex = this.currentIndex++;
-    if (nextIndex >= this.notReadyChunks.length) return false;
-    else return this.notReadyChunks[nextIndex];
-  }
-
-  hasNext() {
-    if (this.currentIndex >= this.notReadyChunks.length) return false;
-    else return true;
-  }
-
-  private getNotReadyChunks(readyChunks: number[], chunksCount: number): number[] {
-    const ready = new Set(readyChunks);
-
-    const needSend = [];
-    for (let i = 1; i <= chunksCount; i++) {
-      if (!ready.has(i)) needSend.push(i);
-    }
-
-    return needSend;
   }
 }
