@@ -5,14 +5,14 @@ export interface StoredUploadSession {
   readonly fileInfo: {
     name: string,
     size: number,
-    lastModified: number
-  }
+    lastModified: number;
+  };
 }
 
 export const uploadsLocalStorageManager = {
   getUploads(): StoredUploadSession[] {
     const json = localStorage.getItem(storageKey);
-    if (json === null) return []
+    if (json === null) return [];
     const items = JSON.parse(json) ?? [];
     return items;
   },

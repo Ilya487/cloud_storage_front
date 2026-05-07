@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { FileSender } from "../API/FileSender.ts";
+import { FileSender } from "../API/FileSender/FileSender.ts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
 import { uploadsLocalStorageManager } from "../utils/uploadsLocalStorageManager.ts";
+import type { UploadResumeData } from "../RestoreUploads/types.ts";
 
 const UploadContext = createContext();
 
@@ -14,17 +15,17 @@ export const UploadProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const navigator = useNavigate();
 
-  function addUploads(files, destinationDirId) {
+  function addUploads(files: File[], destinationDirId: number | "root") {
     if (activeUploads.size == 3) return;
     files.forEach(file => {
       if (file instanceof File) createUploadSession(file, destinationDirId);
     });
   }
 
-  async function createUploadSession(file, destinationDirId) {
-    const fileSender = new FileSender({ file, destinationDirId });
+  async function createUploadSession(file: File, destinationDirId: number | "root") {
+    const fileSender = new FileSender({ file, destinationDirId, retriesCount: 2 });
     const generatedKey = file.name + Date.now();
-    let sessionId;
+    let sessionId: number | string;
 
     fileSender.onChunkLoad = ({ progress }) => {
       updateSessionProgress(sessionId, progress);
@@ -66,22 +67,30 @@ export const UploadProvider = ({ children }) => {
       } else cancelActiveSession(sessionId, message);
     };
 
-    sessionId = await fileSender.initialize();
-    uploadsLocalStorageManager.addItem(file, sessionId);
-    fileSender.start();
+    fileSender.onSessionIni = (id, path) => {
+      sessionId = id;
+      uploadsLocalStorageManager.addItem(file, sessionId);
 
-    addUploadSession({
-      id: sessionId,
-      file,
-      status: fileSender.getStatus(),
-      path: fileSender.getPath(),
-      destinationDirId,
-      cancelUpload: async () => {
-        await fileSender.cancelSending();
-        cancelActiveSession(sessionId, "Отменен");
-        uploadsLocalStorageManager.deleteItem(sessionId);
-      },
-    });
+      addUploadSession({
+        id: sessionId,
+        file,
+        status: fileSender.getStatus(),
+        path,
+        destinationDirId,
+        cancelUpload: async () => {
+          await fileSender.cancelSending();
+          cancelActiveSession(sessionId, "Отменен");
+          uploadsLocalStorageManager.deleteItem(sessionId);
+        },
+      });
+    };
+
+    fileSender.start();
+  }
+
+  function resumeUploads(resumeData: UploadResumeData[]) {
+    // TODO
+    // resumeData.forEach(v => createResumeFileSender(v));
   }
 
   function cancelActiveSession(id, reason) {
@@ -102,12 +111,20 @@ export const UploadProvider = ({ children }) => {
     });
   }
 
-  function addUploadSession({ id, file, cancelUpload, status, destinationDirId, path }) {
+  function addUploadSession({
+    id,
+    file,
+    cancelUpload,
+    status,
+    destinationDirId,
+    path,
+    progress = 0,
+  }) {
     setActiveUploads(uploads => [
       {
         id,
         file,
-        progress: 0,
+        progress,
         cancelUpload,
         status,
         destinationDirId,
@@ -222,6 +239,7 @@ export const UploadProvider = ({ children }) => {
         preparingUploads,
         cancelUploads,
         countOfActiveUpload: calcCountActiveUpload(),
+        resumeUploads,
       }}
     >
       {children}

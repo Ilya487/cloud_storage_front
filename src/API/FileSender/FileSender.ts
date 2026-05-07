@@ -40,6 +40,7 @@ export class FileSender {
   public onChunkLoad?: (data: ChunkUploadResponse) => void;
   public onFileLoad?: () => void;
   public onStatusUpdate?: (status: SendingStatus) => void;
+  public onSessionIni?: (sessionId: number, filePath: string) => void;
   public onError?: (message: string) => void;
 
   private status: SendingStatus = 'notRunning';
@@ -64,7 +65,7 @@ export class FileSender {
       this.retriesCount = params.retriesCount;
       this.destinationDirId = params.resumeData.destinationDirId;
 
-      this.chunkSender = this.createChunkSender(new ResumedChunkSelector(params.resumeData.readyChunks, params.resumeData.chunksCount));
+      this.chunkSender = this.createChunkSender(this.sessionInfo, new ResumedChunkSelector(params.resumeData.readyChunks, params.resumeData.chunksCount));
     }
     else {
       this.file = params.file;
@@ -74,33 +75,19 @@ export class FileSender {
     }
   }
 
-  async initialize() {
-    if (this.status == 'preparing')
-      throw new Error('Инициализация уже запущена');
-    if (this.sessionInfo)
-      throw new Error('Сессия уже инициализирована');
-
-    this.updateStatus('preparing');
-    const sessionInfo = await this.sendInitializeRequest();
+  async start() {
+    const sessionInfo = await this.initialize();
     this.sessionInfo = sessionInfo;
-    this.chunkSender = this.createChunkSender(new SequentialChunkSelector(this.sessionInfo.chunksCount));
 
-    return sessionInfo.sessionId;
-  }
-
-  start() {
-    if (!this.sessionInfo || !this.chunkSender) {
-      throw new Error("Сессия не инициализирована!");
-    }
+    this.chunkSender = this.createChunkSender(sessionInfo, new SequentialChunkSelector(this.sessionInfo.chunksCount));
 
     this.updateStatus('sending');
-
     this.chunkSender.start();
   }
 
   async cancelSending() {
-    if (this.status !== 'sending' && this.status !== 'building')
-      return;
+    if (this.status !== 'sending')
+      throw new Error('Невозможно отменить загрузку');
 
     this.updateStatus('canceling');
 
@@ -114,21 +101,20 @@ export class FileSender {
     return this.status;
   }
 
-  getPath() {
-    if (!this.sessionInfo)
-      throw new Error('Сначала нужно инициализировать сессию загрузки');
-    return this.sessionInfo.path;
+  private async initialize() {
+    this.updateStatus('preparing');
+    const sessionInfo = await this.sendInitializeRequest();
+    this.onSessionIni?.(sessionInfo.sessionId, sessionInfo.path);
+
+    return sessionInfo;
   }
 
-  private createChunkSender(chunkSelector: ChunkSelectStrategy) {
-    if (!this.sessionInfo)
-      throw new Error('Сначала нужно инициализировать сессию загрузки');
-
+  private createChunkSender(sessionInfo: SessionIniResponse, chunkSelector: ChunkSelectStrategy) {
     const chunkSender = new ChunkSender({
       file: this.file,
       requestsPerRun: 4,
       serverUrl: this.serverUrl,
-      sessionInfo: this.sessionInfo,
+      sessionInfo,
       retriesCount: this.retriesCount,
       chunkSelector,
     });
