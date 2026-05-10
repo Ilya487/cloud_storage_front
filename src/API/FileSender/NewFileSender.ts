@@ -19,10 +19,7 @@ export class NewFileSender extends FileSender {
         const sessionInfo = await this.initialize();
         this.sessionInfo = sessionInfo;
 
-        this.chunkSender = this.createChunkSender(sessionInfo, new SequentialChunkSelector(this.sessionInfo.chunksCount));
-
-        this.updateStatus('sending');
-        this.chunkSender.start();
+        this.startChunkSending(sessionInfo, new SequentialChunkSelector(this.sessionInfo.chunksCount));
     }
 
     private async initialize() {

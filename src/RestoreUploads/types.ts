@@ -1,3 +1,4 @@
+import type { RestoreUploadSessionResponse } from "../API/uploadSevice";
 import type { StoredUploadSession } from "../utils/uploadsLocalStorageManager";
 
 export type UploadWithFile = {
@@ -8,7 +9,12 @@ export type UploadWithFile = {
 export interface MatchesResult {
     success: number;
     faild: number;
-    sessionIdFileMap: Map<number, File>
+    sessionIdFileMap: Map<number, File>;
 }
 
-export type UploadRestoringInfo = StoredUploadSession & { reason?: string };
+export type UploadRestoringInfo = StoredUploadSession & { reason?: string; };
+
+export type UploadResumeData = Omit<
+    Extract<RestoreUploadSessionResponse, { res: true; }>,
+    'res'
+> & { file: File; };

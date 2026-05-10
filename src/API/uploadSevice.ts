@@ -1,5 +1,6 @@
 import apiRequest from "./apiRequest";
 import { SERVER_URL } from "./config";
+import type { UploadSessionStatus } from "./FileSender/FileSender";
 
 export type RestoreUploadSessionResponse = {
     id: number;
@@ -9,6 +10,10 @@ type RestoreSuccess = {
     res: true;
     chunksCount: number;
     readyChunks: number[];
+    chunkSize: number;
+    path: string;
+    destinationDirId: number | 'root';
+    status: UploadSessionStatus;
 };
 
 type RestoreError = {
@@ -46,9 +51,15 @@ async function cancelSession(id: number): Promise<CancelSessionRes> {
         await api<{}>({
             url: SERVER_URL + '/upload/cancel/' + id,
             options: { credentials: "include", method: 'DELETE' },
+            errorHandler(errorData, response) {
+                if (response.status == 404 || response.status == 400)
+                    throw true;
+                throw errorData;
+            },
         });
     } catch (err) {
-        res.res = false;
+        if (err !== true)
+            res.res = false;
     }
     finally {
         return res;

@@ -5,8 +5,9 @@ import { ChunkSender, type ChunkUploadResponse } from "./ChunkSender";
 
 type SendingStatus = 'sending' | 'cancel' | 'notRunning' | 'preparing' | 'complete' | 'canceling' | 'building';
 
+export type UploadSessionStatus = 'building' | 'complete' | 'error' | 'uploading' | 'cancelled';
 interface SessionCheckStatusResponse {
-  status: 'building' | 'complete' | 'error' | 'uploading' | 'cancelled';
+  status: UploadSessionStatus;
 }
 
 export interface SessionIniResponse {
@@ -64,8 +65,8 @@ export abstract class FileSender {
     return this.status;
   }
 
-  protected createChunkSender(sessionInfo: SessionIniResponse, chunkSelector: ChunkSelectStrategy) {
-    const chunkSender = new ChunkSender({
+  protected startChunkSending(sessionInfo: SessionIniResponse, chunkSelector: ChunkSelectStrategy) {
+    this.chunkSender = new ChunkSender({
       file: this.file,
       requestsPerRun: 4,
       serverUrl: this.serverUrl,
@@ -74,14 +75,15 @@ export abstract class FileSender {
       chunkSelector,
     });
 
-    chunkSender.onChunkLoad = data => this.onChunkLoad && this.onChunkLoad(data);
-    chunkSender.onComplete = () => this.startBuild();
-    chunkSender.onError = () => {
+    this.chunkSender.onChunkLoad = data => this.onChunkLoad && this.onChunkLoad(data);
+    this.chunkSender.onComplete = () => this.startBuild();
+    this.chunkSender.onError = () => {
       this.cancelSending();
       this.handleError("Ошибка загрузки файла");
     };
 
-    return chunkSender;
+    this.updateStatus('sending');
+    this.chunkSender.start();
   }
 
   private async sendCancelRequest() {
@@ -118,7 +120,8 @@ export abstract class FileSender {
     this.startPolling();
   }
 
-  private startPolling() {
+  protected startPolling() {
+    this.updateStatus('building');
     const interval = this.getPollingInterval();
 
     const intervalId = setInterval(async () => {
@@ -130,10 +133,14 @@ export abstract class FileSender {
       }
       if (status == "complete") {
         clearInterval(intervalId);
-        this.updateStatus('complete');
-        this.onFileLoad && this.onFileLoad();
+        this.handleCompleteUpload();
       }
     }, interval);
+  }
+
+  protected handleCompleteUpload() {
+    this.updateStatus('complete');
+    this.onFileLoad && this.onFileLoad();
   }
 
   private async checkFileBuildingStatus() {

@@ -5,6 +5,8 @@ import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
 import { uploadsLocalStorageManager } from "../utils/uploadsLocalStorageManager.ts";
 import type { UploadResumeData } from "../RestoreUploads/types.ts";
+import { NewFileSender } from "../API/FileSender/NewFileSender.ts";
+import { ResumeFileSender } from "../API/FileSender/ResumeFileSender.ts";
 
 const UploadContext = createContext();
 
@@ -216,7 +218,7 @@ export const UploadProvider = ({ children }) => {
       });
 
       queryClient.invalidateQueries({
-        queryKey: ["dir", updatedSession.destinationDirId],
+        queryKey: ["dir", +updatedSession.destinationDirId],
       });
       return [...uploads];
     });
