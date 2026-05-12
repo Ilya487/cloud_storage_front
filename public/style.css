@@ -105,3 +105,12 @@ body {
 .context-menu__item:hover {
     background-color: rgb(59, 59, 59);
 }
+
+.thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #888, #555);
+    border-radius: 10px;
+}

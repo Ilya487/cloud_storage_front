@@ -1,5 +1,5 @@
 import ModalWindow from "../Components/ModalWindow/ModalWindow.jsx";
-import { useLayoutEffect, type ChangeEvent, type FC } from "react";
+import { useEffect, useRef, type ChangeEvent, type FC } from "react";
 import fileSizeDisplay from "../utils/fileSizeDisplay.js";
 import clsx from "clsx";
 import Spinner from "../Components/Spinner/Spinner.jsx";
@@ -7,14 +7,24 @@ import { useMachine } from "react-robot";
 import { restoringSessionsStateMachine } from "./machine.js";
 import type { MachineEvent, SelectFilesEvent } from "./machine.js";
 import type { UploadRestoringInfo } from "./types.js";
+import { uploadsLocalStorageManager } from "../utils/uploadsLocalStorageManager.js";
+import { useUpload } from "../context/UploadContext.js";
 
 const RestoreAbortedUploads: FC = () => {
   const [current, send] = useMachine(restoringSessionsStateMachine);
-  const isLoading = current.name == "cancelingSessions" || current.name == "loadingSessionsInfo";
+  const { resumeUploads } = useUpload();
+  const hasAbortedUploads = useRef(uploadsLocalStorageManager.getUploads().length > 0);
 
-  useLayoutEffect(() => {
-    if (current.context.uploadsList.length == 0) sendEvent("exit");
-  }, []);
+  useEffect(() => {
+    if (current.name == "exit" && current.context.dataForResumeUpload.length > 0) {
+      resumeUploads(current.context.dataForResumeUpload);
+    }
+  }, [current.name]);
+
+  const isLoading =
+    current.name == "cancelingSessions" ||
+    current.name == "loadingSessionsInfo" ||
+    current.name == "cancelingSessionsAfterContinue";
 
   function handleFilesSelect(e: ChangeEvent<HTMLInputElement>) {
     const files = e.target.files as FileList;
@@ -30,6 +40,7 @@ const RestoreAbortedUploads: FC = () => {
     send(ev);
   }
 
+  if (current.name == "start" && !hasAbortedUploads.current) sendEvent("exit");
   if (current.name == "exit") return null;
 
   return (
@@ -117,7 +128,7 @@ const UploadList: FC<{
   enableBorderStyle: boolean;
 }> = ({ uploads, enableBorderStyle = false }) => {
   return (
-    <ul className="overflow-auto max-h-80 mb-3">
+    <ul className="overflow-auto max-h-80 mb-3 p-2 thin-scrollbar">
       {uploads.map(upload => (
         <li
           className={clsx(
