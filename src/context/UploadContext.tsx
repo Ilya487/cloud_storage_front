@@ -1,5 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { FileSender } from "../API/FileSender/FileSender.ts";
+import {
+  FileSender,
+  type TDestinationDirId,
+  type UploadSessionStatus,
+} from "../API/FileSender/FileSender.ts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
@@ -17,15 +21,15 @@ export const UploadProvider = ({ children }) => {
   const queryClient = useQueryClient();
   const navigator = useNavigate();
 
-  function addUploads(files: File[], destinationDirId: number | "root") {
-    if (activeUploads.size == 3) return;
+  function addUploads(files: File[], destinationDirId: TDestinationDirId) {
+    // if (activeUploads.size == 3) return;
     files.forEach(file => {
       if (file instanceof File) createUploadSession(file, destinationDirId);
     });
   }
 
-  async function createUploadSession(file: File, destinationDirId: number | "root") {
-    const fileSender = new FileSender({ file, destinationDirId, retriesCount: 2 });
+  async function createUploadSession(file: File, destinationDirId: TDestinationDirId) {
+    const fileSender = new NewFileSender({ file, destinationDirId, retriesCount: 2 });
     const generatedKey = file.name + Date.now();
     let sessionId: number | string;
 
@@ -91,8 +95,57 @@ export const UploadProvider = ({ children }) => {
   }
 
   function resumeUploads(resumeData: UploadResumeData[]) {
-    // TODO
-    // resumeData.forEach(v => createResumeFileSender(v));
+    resumeData.forEach(v => createResumeFileSender(v));
+  }
+
+  function createResumeFileSender(resumeData: UploadResumeData) {
+    const fileSender = new ResumeFileSender({ resumeData, retriesCount: 2 });
+
+    fileSender.onChunkLoad = ({ progress }) => {
+      updateSessionProgress(resumeData.id, progress);
+    };
+
+    fileSender.onFileLoad = () => {
+      toast(`Файл "${resumeData.file.name}" успешно загружен.`, {
+        type: "success",
+        position: "top-center",
+        autoClose: 2500,
+      });
+      addReadySession(resumeData.id);
+      uploadsLocalStorageManager.deleteItem(resumeData.id);
+    };
+
+    fileSender.onStatusUpdate = status => {
+      if (status == "cancel") {
+        updatePreparingSessionStatus(resumeData.id, status);
+        uploadsLocalStorageManager.deleteItem(resumeData.id);
+      } else if (status == FileSender.STATUS_BUILDING) {
+        updateSessionStatus(resumeData.id, status);
+      } else {
+        deletePreparingSession(resumeData.id);
+        updateSessionStatus(resumeData.id, status);
+      }
+    };
+
+    fileSender.onError = message => {
+      cancelActiveSession(resumeData.id, message);
+    };
+
+    addUploadSession({
+      id: resumeData.id,
+      file: resumeData.file,
+      status: fileSender.getStatus(),
+      path: resumeData.path,
+      destinationDirId: resumeData.destinationDirId,
+      progress: (resumeData.readyChunks.length / resumeData.chunksCount) * 100,
+      cancelUpload: async () => {
+        await fileSender.cancelSending();
+        cancelActiveSession(resumeData.id, "Отменен");
+        uploadsLocalStorageManager.deleteItem(resumeData.id);
+      },
+    });
+
+    fileSender.start();
   }
 
   function cancelActiveSession(id, reason) {
