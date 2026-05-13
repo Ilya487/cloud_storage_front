@@ -1,6 +1,6 @@
 import apiRequest from "./apiRequest";
 import { SERVER_URL } from "./config";
-import type { UploadSessionStatus } from "./FileSender/FileSender";
+import type { TDestinationDirId, UploadSessionStatus } from "./FileSender/FileSender";
 
 export type RestoreUploadSessionResponse = {
     id: number;
@@ -12,7 +12,7 @@ type RestoreSuccess = {
     readyChunks: number[];
     chunkSize: number;
     path: string;
-    destinationDirId: number | 'root';
+    destinationDirId: TDestinationDirId;
     status: UploadSessionStatus;
 };
 

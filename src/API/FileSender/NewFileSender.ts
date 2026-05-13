@@ -1,10 +1,10 @@
 import type { DefaultErrorBody } from "../apiRequest";
 import { SequentialChunkSelector } from "./ChunkSelectStrategy";
-import { FileSender, type SessionIniResponse } from "./FileSender";
+import { FileSender, type SessionIniResponse, type TDestinationDirId } from "./FileSender";
 
 interface NewFileSenderConstruct {
     file: File,
-    destinationDirId: number | 'root';
+    destinationDirId: TDestinationDirId;
     retriesCount: number;
 }
 

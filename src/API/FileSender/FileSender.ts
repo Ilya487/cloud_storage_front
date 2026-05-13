@@ -17,6 +17,8 @@ export interface SessionIniResponse {
   sessionId: number;
 }
 
+export type TDestinationDirId = number | "root";
+
 export abstract class FileSender {
   static STATUS_SENDING = "sending";
   static STATUS_CANCEL = "cancel";
@@ -33,7 +35,7 @@ export abstract class FileSender {
 
   protected status: SendingStatus = 'notRunning';
   protected file: File;
-  protected destinationDirId: number | "root";
+  protected destinationDirId: TDestinationDirId;
   protected retriesCount: number;
   protected serverUrl: string = SERVER_URL;
   protected apiClient = apiRequest();
