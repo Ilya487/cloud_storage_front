@@ -116,6 +116,22 @@ const RestoreAbortedUploads: FC = () => {
             </div>
           </>
         )}
+
+        {current.name == "handlingRestoreSessionErrorResponse" && (
+          <>
+            <p className="text-center mb-2 text-red-600">
+              Не удалось получить информацию о загрузках
+            </p>
+            <div className="flex justify-center">
+              <button className="border rounded p-1 mr-4" onClick={() => sendEvent("retry")}>
+                Повторить
+              </button>
+              <button className="border rounded p-1" onClick={() => sendEvent("back")}>
+                Назад
+              </button>
+            </div>
+          </>
+        )}
       </ModalWindow>
     </>
   );

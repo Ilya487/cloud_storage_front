@@ -11,7 +11,7 @@ import { action, createMachine, guard, immediate, invoke, reduce, state, transit
 import matchFilesWithSessions from "./matchFilesWithSessions.js";
 import type { MatchesResult, UploadRestoringInfo, UploadResumeData } from "./types.js";
 
-const events = ["finish", "exit", "selectFiles", "back", "continue", "confirm", "cancel"] as const;
+const events = ["finish", "exit", "selectFiles", "back", "continue", "confirm", "cancel", "retry"] as const;
 export type MachineEvent = (typeof events)[number];
 
 type Context = {
@@ -159,9 +159,12 @@ export const restoringSessionsStateMachine = createMachine(
             ),
             transition(
                 "error",
-                "exit",
-                action(() => alert("EROR")),
+                "handlingRestoreSessionErrorResponse",
             ),
+        ),
+        handlingRestoreSessionErrorResponse: state(
+            transition('retry', 'loadingSessionsInfo'),
+            transition('back', 'start', reduce<Context, unknown>(ctx => ({ ...ctx, selectedFiles: [] })))
         ),
         handlingRestoreResult: state(
             immediate(
