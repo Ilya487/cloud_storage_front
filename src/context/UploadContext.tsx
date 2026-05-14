@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import {
   FileSender,
+  type SendingStatus,
   type TDestinationDirId,
-  type UploadSessionStatus,
 } from "../API/FileSender/FileSender.ts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
@@ -14,15 +14,78 @@ import { ResumeFileSender } from "../API/FileSender/ResumeFileSender.ts";
 
 const UploadContext = createContext();
 
+interface BaseUploadSession {
+  id: number | string;
+  file: File;
+  destinationDirId: TDestinationDirId;
+  status: SendingStatus;
+}
+
+interface PreparingUploadSession extends BaseUploadSession {
+  id: string;
+  status: "preparing";
+}
+
+interface SendingUploadSession extends BaseUploadSession {
+  status: "sending";
+  path: string;
+  progress: number;
+  cancelUpload: () => void;
+}
+
+interface BuildingUploadSession extends BaseUploadSession {
+  status: "building";
+  path: string;
+}
+
+interface CompletedUploadSession extends BaseUploadSession {
+  status: "complete";
+  path: string;
+  readyAt: Date;
+  delete: () => void;
+  openDir: () => void;
+}
+
+interface CancelingUploadSession extends BaseUploadSession {
+  status: "canceling";
+  path: string;
+}
+
+interface CanceledUploadSession extends BaseUploadSession {
+  status: "cancel";
+  reason: string;
+  restart: () => void;
+  delete: () => void;
+}
+
+type UploadSession =
+  | PreparingUploadSession
+  | SendingUploadSession
+  | BuildingUploadSession
+  | CompletedUploadSession
+  | CancelingUploadSession
+  | CanceledUploadSession;
+
+type ActiveUploadSesion = SendingUploadSession | BuildingUploadSession | CancelingUploadSession;
+
 export const UploadProvider = ({ children }) => {
-  const [activeUploads, setActiveUploads] = useState([]);
-  const [preparingUploads, setPreparingUploads] = useState([]);
-  const [cancelUploads, setCancelUploads] = useState([]);
+  const [activeUploads, setActiveUploads] = useState<ActiveUploadSesion[]>([]);
+  const [preparingUploads, setPreparingUploads] = useState<PreparingUploadSession[]>([]);
+  const [cancelUploads, setCancelUploads] = useState<CanceledUploadSession[]>([]);
+
+  const [uploadSessions, setUploadSessions] = useState<UploadSession[]>([]);
   const queryClient = useQueryClient();
   const navigator = useNavigate();
 
+  useEffect(() => {
+    setActiveUploads(
+      uploadSessions.filter(item => isUploadActive(item.status) || item.status == "complete"),
+    );
+    setPreparingUploads(uploadSessions.filter(item => item.status == "preparing"));
+    setCancelUploads(uploadSessions.filter(item => item.status == "cancel"));
+  }, [uploadSessions]);
+
   function addUploads(files: File[], destinationDirId: TDestinationDirId) {
-    // if (activeUploads.size == 3) return;
     files.forEach(file => {
       if (file instanceof File) createUploadSession(file, destinationDirId);
     });
@@ -34,7 +97,7 @@ export const UploadProvider = ({ children }) => {
     let sessionId: number | string;
 
     fileSender.onChunkLoad = ({ progress }) => {
-      updateSessionProgress(sessionId, progress);
+      updateSessionProgress(+sessionId, progress);
     };
 
     fileSender.onFileLoad = () => {
@@ -43,50 +106,51 @@ export const UploadProvider = ({ children }) => {
         position: "top-center",
         autoClose: 2500,
       });
-      addReadySession(sessionId);
-      uploadsLocalStorageManager.deleteItem(sessionId);
+      addReadySession(+sessionId);
+      uploadsLocalStorageManager.deleteItem(+sessionId);
     };
 
     fileSender.onStatusUpdate = status => {
-      if (status == FileSender.STATUS_PREPARING) {
+      if (status == "preparing") {
         addPreparingSession({
           id: generatedKey,
           file,
-          status,
+          status: "preparing",
           destinationDirId,
         });
       } else if (status == FileSender.STATUS_CANCEL && !sessionId) {
-        updatePreparingSessionStatus(generatedKey, status);
+        updateSessionStatus(generatedKey, status);
       } else if (status == "cancel") {
-        uploadsLocalStorageManager.deleteItem(sessionId);
+        uploadsLocalStorageManager.deleteItem(+sessionId);
       } else if (status == FileSender.STATUS_BUILDING) {
         updateSessionStatus(sessionId, status);
       } else {
-        deletePreparingSession(generatedKey);
+        deleteSession(generatedKey);
         updateSessionStatus(sessionId, status);
       }
     };
 
     fileSender.onError = message => {
       if (!sessionId) {
-        cancelPreparingSession(generatedKey, message);
-      } else cancelActiveSession(sessionId, message);
+        cancelSession(generatedKey, message);
+      } else cancelSession(sessionId, message);
     };
 
     fileSender.onSessionIni = (id, path) => {
       sessionId = id;
       uploadsLocalStorageManager.addItem(file, sessionId);
 
-      addUploadSession({
+      addSendingUploadSession({
         id: sessionId,
         file,
-        status: fileSender.getStatus(),
+        status: "sending",
+        progress: 0,
         path,
         destinationDirId,
         cancelUpload: async () => {
           await fileSender.cancelSending();
-          cancelActiveSession(sessionId, "Отменен");
-          uploadsLocalStorageManager.deleteItem(sessionId);
+          cancelSession(id, "Отменен");
+          uploadsLocalStorageManager.deleteItem(id);
         },
       });
     };
@@ -117,30 +181,29 @@ export const UploadProvider = ({ children }) => {
 
     fileSender.onStatusUpdate = status => {
       if (status == "cancel") {
-        updatePreparingSessionStatus(resumeData.id, status);
+        updateSessionStatus(resumeData.id, status);
         uploadsLocalStorageManager.deleteItem(resumeData.id);
       } else if (status == FileSender.STATUS_BUILDING) {
         updateSessionStatus(resumeData.id, status);
       } else {
-        deletePreparingSession(resumeData.id);
         updateSessionStatus(resumeData.id, status);
       }
     };
 
     fileSender.onError = message => {
-      cancelActiveSession(resumeData.id, message);
+      cancelSession(resumeData.id, message);
     };
 
-    addUploadSession({
+    addSendingUploadSession({
       id: resumeData.id,
       file: resumeData.file,
-      status: fileSender.getStatus(),
+      status: "sending",
       path: resumeData.path,
       destinationDirId: resumeData.destinationDirId,
       progress: (resumeData.readyChunks.length / resumeData.chunksCount) * 100,
       cancelUpload: async () => {
         await fileSender.cancelSending();
-        cancelActiveSession(resumeData.id, "Отменен");
+        cancelSession(resumeData.id, "Отменен");
         uploadsLocalStorageManager.deleteItem(resumeData.id);
       },
     });
@@ -148,142 +211,94 @@ export const UploadProvider = ({ children }) => {
     fileSender.start();
   }
 
-  function cancelActiveSession(id, reason) {
-    setActiveUploads(currentActiveUploads => {
-      const canceledSession = currentActiveUploads.find(session => session.id == id);
-      addCancelSession(canceledSession, reason);
+  function cancelSession(id: number | string, reason: string) {
+    setUploadSessions(sessions => {
+      return sessions.map(session => {
+        if (session.id !== id) return session;
 
-      return currentActiveUploads.filter(session => session.id !== id);
-    });
-  }
+        const canceledSession = session as CanceledUploadSession;
+        canceledSession.status = "cancel";
+        canceledSession.reason = reason;
+        canceledSession.restart = () => {
+          deleteSession(canceledSession.id);
+          createUploadSession(canceledSession.file, canceledSession.destinationDirId);
+        };
+        canceledSession.delete = () => {
+          deleteSession(canceledSession.id);
+        };
 
-  function cancelPreparingSession(id, reason) {
-    setPreparingUploads(currentPreapringUploads => {
-      const canceledSession = currentPreapringUploads.find(session => session.id == id);
-      addCancelSession(canceledSession, reason);
-
-      return currentPreapringUploads.filter(session => session.id !== id);
-    });
-  }
-
-  function addUploadSession({
-    id,
-    file,
-    cancelUpload,
-    status,
-    destinationDirId,
-    path,
-    progress = 0,
-  }) {
-    setActiveUploads(uploads => [
-      {
-        id,
-        file,
-        progress,
-        cancelUpload,
-        status,
-        destinationDirId,
-        path,
-      },
-      ...uploads,
-    ]);
-  }
-
-  function addPreparingSession({ id, file, status, destinationDirId }) {
-    setPreparingUploads(uploads => [
-      ...uploads,
-      {
-        id,
-        file,
-        status,
-        destinationDirId,
-      },
-    ]);
-  }
-
-  function updateSessionProgress(id, progress) {
-    setActiveUploads(uploads =>
-      uploads.map(session => (session.id == id ? { ...session, progress } : session)),
-    );
-  }
-
-  function updateSessionStatus(id, newStatus) {
-    setActiveUploads(uploads =>
-      uploads.map(session => (session.id == id ? { ...session, status: newStatus } : session)),
-    );
-  }
-
-  function updatePreparingSessionStatus(id, newStatus) {
-    setPreparingUploads(uploads =>
-      uploads.map(session => (session.id == id ? { ...session, status: newStatus } : session)),
-    );
-  }
-
-  function deletePreparingSession(id) {
-    setPreparingUploads(uploads => uploads.filter(session => session.id != id));
-  }
-
-  function deleteCancelSession(id) {
-    setCancelUploads(uploads => uploads.filter(session => session.id != id));
-  }
-
-  function deleteReadySession(id) {
-    setActiveUploads(uploads => uploads.filter(session => session.id != id));
-  }
-
-  function addCancelSession(canceledSession, reason) {
-    setCancelUploads(uploads => {
-      if (uploads.some(session => session.id == canceledSession.id)) return uploads;
-      return [
-        {
-          ...canceledSession,
-          reason,
-          restart: () => {
-            deleteCancelSession(canceledSession.id);
-            createUploadSession(canceledSession.file, canceledSession.destinationDirId);
-          },
-          delete: () => {
-            deleteCancelSession(canceledSession.id);
-          },
-        },
-        ...uploads,
-      ];
-    });
-  }
-
-  function addReadySession(sessionId) {
-    setActiveUploads(uploads => {
-      const updatedSession = uploads[uploads.findIndex(value => value.id == sessionId)];
-      updatedSession.openDir = () => {
-        navigator(`/catalog/${updatedSession.destinationDirId}`);
-      };
-      updatedSession.delete = () => deleteReadySession(updatedSession.id);
-
-      updatedSession.readyAt = Date.now();
-      uploads.sort((a, b) => {
-        const needStatus = FileSender.STATUS_COMPLETE;
-        if (a.status == needStatus && b.status == needStatus) {
-          return b.readyAt - a.readyAt;
-        }
-        if (a.status == needStatus) return 1;
-        if (b.status == needStatus) return -1;
-        return 0;
+        return canceledSession;
       });
-
-      queryClient.invalidateQueries({
-        queryKey: ["dir", +updatedSession.destinationDirId],
-      });
-      return [...uploads];
     });
   }
 
-  function calcCountActiveUpload() {
-    const activeCount = activeUploads.reduce((acc, item) => {
-      if (item.status !== FileSender.STATUS_COMPLETE) return ++acc;
+  function addSendingUploadSession(session: SendingUploadSession) {
+    setUploadSessions(sessions => [...sessions, session]);
+  }
+
+  function addPreparingSession(session: PreparingUploadSession) {
+    setUploadSessions(uploads => [...uploads, session]);
+  }
+
+  function updateSessionProgress(id: number, progress: number) {
+    setUploadSessions(uploads =>
+      uploads.map(session => {
+        if (session.id == id && session.status == "sending") {
+          session.progress = progress;
+          return session;
+        } else return session;
+      }),
+    );
+  }
+
+  function updateSessionStatus(id: number | string, newStatus: SendingStatus) {
+    setUploadSessions(uploads =>
+      uploads.map(session => {
+        if (session.id != id) return session;
+        session.status = newStatus;
+        return session;
+      }),
+    );
+  }
+
+  function deleteSession(id: number | string) {
+    setUploadSessions(sessions => sessions.filter(s => s.id !== id));
+  }
+
+  function addReadySession(sessionId: number) {
+    setUploadSessions(uploads => {
+      return uploads.map(session => {
+        if (session.id !== sessionId) return session;
+        const readySession = session as CompletedUploadSession;
+        readySession.status == "complete";
+        readySession.delete = () => deleteSession(readySession.id);
+        readySession.readyAt = new Date();
+        readySession.openDir = () => {
+          navigator(`/catalog/${readySession.destinationDirId}`);
+        };
+
+        queryClient.invalidateQueries({
+          queryKey: ["dir", +readySession.destinationDirId],
+        });
+
+        return readySession;
+      });
+    });
+  }
+
+  function countNumberActiveUpload() {
+    const activeCount = uploadSessions.reduce((acc, item) => {
+      if (isUploadActive(item.status)) return ++acc;
       else return acc;
     }, 0);
 
-    return activeCount + preparingUploads.length;
+    return activeCount;
+  }
+
+  function isUploadActive(status: SendingStatus) {
+    return (
+      status == "building" || status == "canceling" || status == "preparing" || status == "sending"
+    );
   }
 
   return (
@@ -293,7 +308,7 @@ export const UploadProvider = ({ children }) => {
         activeUploads,
         preparingUploads,
         cancelUploads,
-        countOfActiveUpload: calcCountActiveUpload(),
+        countOfActiveUpload: countNumberActiveUpload(),
         resumeUploads,
       }}
     >
