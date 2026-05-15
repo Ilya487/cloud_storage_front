@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   FileSender,
   type SendingStatus,
@@ -12,7 +12,17 @@ import type { UploadResumeData } from "../RestoreUploads/types.ts";
 import { NewFileSender } from "../API/FileSender/NewFileSender.ts";
 import { ResumeFileSender } from "../API/FileSender/ResumeFileSender.ts";
 
-const UploadContext = createContext();
+type AddUploads = (files: File[], destinationDirId: TDestinationDirId) => void;
+type ResumeUploads = (resumeData: UploadResumeData[]) => void;
+
+interface UploadContext {
+  addUploads: AddUploads;
+  resumeUploads: ResumeUploads;
+  uploadSessions: UploadSession[];
+  countOfActiveUpload: number;
+}
+
+const UploadContext = createContext<UploadContext | null>(null);
 
 interface BaseUploadSession {
   id: number | string;
@@ -58,7 +68,7 @@ interface CanceledUploadSession extends BaseUploadSession {
   delete: () => void;
 }
 
-type UploadSession =
+export type UploadSession =
   | PreparingUploadSession
   | SendingUploadSession
   | BuildingUploadSession
@@ -66,30 +76,16 @@ type UploadSession =
   | CancelingUploadSession
   | CanceledUploadSession;
 
-type ActiveUploadSesion = SendingUploadSession | BuildingUploadSession | CancelingUploadSession;
-
-export const UploadProvider = ({ children }) => {
-  const [activeUploads, setActiveUploads] = useState<ActiveUploadSesion[]>([]);
-  const [preparingUploads, setPreparingUploads] = useState<PreparingUploadSession[]>([]);
-  const [cancelUploads, setCancelUploads] = useState<CanceledUploadSession[]>([]);
-
+export const UploadProvider = ({ children }: { children: ReactNode }) => {
   const [uploadSessions, setUploadSessions] = useState<UploadSession[]>([]);
   const queryClient = useQueryClient();
   const navigator = useNavigate();
 
-  useEffect(() => {
-    setActiveUploads(
-      uploadSessions.filter(item => isUploadActive(item.status) || item.status == "complete"),
-    );
-    setPreparingUploads(uploadSessions.filter(item => item.status == "preparing"));
-    setCancelUploads(uploadSessions.filter(item => item.status == "cancel"));
-  }, [uploadSessions]);
-
-  function addUploads(files: File[], destinationDirId: TDestinationDirId) {
+  const addUploads: AddUploads = (files: File[], destinationDirId: TDestinationDirId) => {
     files.forEach(file => {
       if (file instanceof File) createUploadSession(file, destinationDirId);
     });
-  }
+  };
 
   async function createUploadSession(file: File, destinationDirId: TDestinationDirId) {
     const fileSender = new NewFileSender({ file, destinationDirId, retriesCount: 2 });
@@ -106,7 +102,12 @@ export const UploadProvider = ({ children }) => {
         position: "top-center",
         autoClose: 2500,
       });
+
       addReadySession(+sessionId);
+
+      queryClient.invalidateQueries({
+        queryKey: ["dir", destinationDirId == "root" ? destinationDirId : +destinationDirId],
+      });
       uploadsLocalStorageManager.deleteItem(+sessionId);
     };
 
@@ -158,9 +159,9 @@ export const UploadProvider = ({ children }) => {
     fileSender.start();
   }
 
-  function resumeUploads(resumeData: UploadResumeData[]) {
+  const resumeUploads: ResumeUploads = (resumeData: UploadResumeData[]) => {
     resumeData.forEach(v => createResumeFileSender(v));
-  }
+  };
 
   function createResumeFileSender(resumeData: UploadResumeData) {
     const fileSender = new ResumeFileSender({ resumeData, retriesCount: 2 });
@@ -176,6 +177,13 @@ export const UploadProvider = ({ children }) => {
         autoClose: 2500,
       });
       addReadySession(resumeData.id);
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "dir",
+          resumeData.destinationDirId == "root" ? "root" : resumeData.destinationDirId,
+        ],
+      });
       uploadsLocalStorageManager.deleteItem(resumeData.id);
     };
 
@@ -277,10 +285,6 @@ export const UploadProvider = ({ children }) => {
           navigator(`/catalog/${readySession.destinationDirId}`);
         };
 
-        queryClient.invalidateQueries({
-          queryKey: ["dir", +readySession.destinationDirId],
-        });
-
         return readySession;
       });
     });
@@ -305,11 +309,9 @@ export const UploadProvider = ({ children }) => {
     <UploadContext.Provider
       value={{
         addUploads,
-        activeUploads,
-        preparingUploads,
-        cancelUploads,
-        countOfActiveUpload: countNumberActiveUpload(),
         resumeUploads,
+        uploadSessions,
+        countOfActiveUpload: countNumberActiveUpload(),
       }}
     >
       {children}
@@ -317,4 +319,10 @@ export const UploadProvider = ({ children }) => {
   );
 };
 
-export const useUpload = () => useContext(UploadContext);
+export const useUpload = () => {
+  const context = useContext(UploadContext);
+  if (!context) {
+    throw new Error("useUpload must be used within an UploadProvider");
+  }
+  return context;
+};

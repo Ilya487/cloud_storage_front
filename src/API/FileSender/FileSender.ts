@@ -3,7 +3,7 @@ import { SERVER_URL } from "../config";
 import { type ChunkSelectStrategy } from "./ChunkSelectStrategy";
 import { ChunkSender, type ChunkUploadResponse } from "./ChunkSender";
 
-type SendingStatus = 'sending' | 'cancel' | 'notRunning' | 'preparing' | 'complete' | 'canceling' | 'building';
+export type SendingStatus = 'sending' | 'cancel' | 'notRunning' | 'preparing' | 'complete' | 'canceling' | 'building';
 
 export type UploadSessionStatus = 'building' | 'complete' | 'error' | 'uploading' | 'cancelled';
 interface SessionCheckStatusResponse {
