@@ -4,12 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import Catalog from "./pages/Catalog/Catalog";
 import Layout from "./Components/Layout/Layout";
-import { UploadProvider } from "./context/UploadContext";
+import { UploadProvider } from "./context/UploadContext.tsx";
 import Upload from "./pages/Upload/Upload";
 import { ToastContainer } from "react-toastify";
 import PrivateRoute from "./routing/PrivateRoute";
 import PublicRoute from "./routing/PublicRoute";
 import Trash from "./pages/Trash/Trash";
+import RestoreAbortedUploads from "./RestoreUploads/RestoreAbortedUploads.tsx";
+import AuthHoc from "./HOC/AuthHoc.tsx";
 
 function App() {
   const queryClient = new QueryClient();
@@ -17,6 +19,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <UploadProvider>
+        <AuthHoc component={RestoreAbortedUploads} />
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route element={<PublicRoute />}>

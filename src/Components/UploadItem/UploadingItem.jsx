@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import styles from "./UploadItem.module.css";
-import { FileSender } from "../../API/FileSender";
+import { FileSender } from "../../API/FileSender/FileSender";
 import CancelBtn from "../CancelBtn/CancelBtn";
 import readyStyles from "./ReadyUpload.module.css";
 

@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { useUpload } from "../../context/UploadContext";
+import { useUpload } from "../../context/UploadContext.tsx";
 import { useGetUser } from "../../API/authService";
 
 const Aside = () => {

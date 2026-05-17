@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SERVER_URL } from "./config";
-import useApi from "./useApi";
+import useApi, { type FetchDecoratorParams } from "./useApi";
 
-function getTrashContent() {
+interface DeleteObjectParams { items: number[] }
+
+
+function getTrashContent(): FetchDecoratorParams {
   return {
     url: SERVER_URL + `/fs/trash`,
     options: {
@@ -11,7 +14,7 @@ function getTrashContent() {
   };
 }
 
-function restoreItems(itemsIds) {
+function restoreItems(itemsIds: number[]): FetchDecoratorParams {
   return {
     url: SERVER_URL + "/fs/trash/restore",
     options: {
@@ -22,7 +25,7 @@ function restoreItems(itemsIds) {
   };
 }
 
-function deleteObject({ items }) {
+function deleteObject({ items }: DeleteObjectParams): FetchDecoratorParams {
   return {
     url: SERVER_URL + `/fs/trash/delete`,
     options: {
@@ -48,7 +51,7 @@ export const useTrashContent = () => {
 export const useDeleteObject = () => {
   const queryClient = useQueryClient();
   const apiFetch = useApi();
-  const mutationFn = args => apiFetch(deleteObject(args));
+  const mutationFn = (args: DeleteObjectParams) => apiFetch(deleteObject(args));
 
   return useMutation({
     mutationFn,
@@ -59,7 +62,7 @@ export const useDeleteObject = () => {
 export const useRestoreObjects = () => {
   const queryClient = useQueryClient();
   const apiFetch = useApi();
-  const mutationFn = ({ itemsIds }) => apiFetch(restoreItems(itemsIds));
+  const mutationFn = ({ itemsIds }: { itemsIds: number[] }) => apiFetch(restoreItems(itemsIds));
 
   return useMutation({
     mutationFn,

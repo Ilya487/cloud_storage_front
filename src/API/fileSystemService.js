@@ -167,10 +167,15 @@ export const useRenameObject = () => {
 
 export const useCreateFolder = () => {
   const apiFetch = useApi();
+  const queryClient = useQueryClient();
   const mutationFn = args => apiFetch(createFolder(args));
 
   return useMutation({
     mutationFn,
+    onSuccess(_, vars) {
+      const dirId = vars.parentDirId == "root" ? vars.parentDirId : +vars.parentDirId;
+      queryClient.invalidateQueries({ queryKey: ["dir", dirId] });
+    },
   });
 };
 
