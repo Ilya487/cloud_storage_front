@@ -29,6 +29,9 @@ export const uploadsLocalStorageManager = {
   },
 
   addItem(file: File, sessionId: number) {
+    const uploads = this.getUploads();
+    if (uploads.some(u => u.sessionId == sessionId)) return;
+
     const newUpload: StoredUploadSession = {
       sessionId,
       fileInfo: {
@@ -38,7 +41,6 @@ export const uploadsLocalStorageManager = {
       }
     };
 
-    const uploads = this.getUploads();
     uploads.push(newUpload);
 
     this.saveItems(uploads);

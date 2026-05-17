@@ -121,12 +121,11 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
           this.getDestinationDirId() == "root" ? "root" : this.getDestinationDirId(),
         ],
       });
-      uploadsLocalStorageManager.deleteItem(this.getSessionId());
     }
 
     protected cancelStatusHandler() {
-      sessionsManager.updateSessionStatus(this.getSessionId(), "cancel");
       uploadsLocalStorageManager.deleteItem(this.getSessionId());
+      sessionsManager.updateSessionStatus(this.getSessionId(), "cancel");
     }
 
     protected cancelingStatusHandler() {
@@ -138,10 +137,12 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
     }
 
     protected completeStatusHandler() {
+      uploadsLocalStorageManager.deleteItem(this.getSessionId());
       sessionsManager.updateSessionStatus(this.getSessionId(), "complete");
     }
 
     protected sendingStatusHandler() {
+      uploadsLocalStorageManager.addItem(this.getFile(), this.getSessionId());
       sessionsManager.updateSessionStatus(this.getSessionId(), "sending");
     }
 
@@ -238,7 +239,6 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
 
     private onSessionIni: NonNullable<NewFileSender["onSessionIni"]> = (id, path) => {
       this.sessionId = id;
-      uploadsLocalStorageManager.addItem(this.file, this.sessionId);
 
       sessionsManager.addSendingUploadSession({
         id: this.sessionId,
@@ -250,7 +250,6 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
         cancelUpload: async () => {
           await this.fileSender.cancelSending();
           this.cancelSession(id, "Отменен");
-          uploadsLocalStorageManager.deleteItem(id);
         },
       });
     };
@@ -295,7 +294,6 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
           cancelUpload: async () => {
             await this.fileSender.cancelSending();
             this.cancelSession(this.resumeData.id, "Отменен");
-            uploadsLocalStorageManager.deleteItem(this.resumeData.id);
           },
         });
 
