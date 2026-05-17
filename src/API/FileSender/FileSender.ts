@@ -18,6 +18,12 @@ export interface SessionIniResponse {
 }
 
 export type TDestinationDirId = number | "root";
+export interface FileSenderCallbacks {
+  onChunkLoad: (data: ChunkUploadResponse) => void;
+  onFileLoad: () => void;
+  onStatusUpdate: (status: SendingStatus) => void;
+  onError: (message: string) => void;
+}
 
 export abstract class FileSender {
   static STATUS_SENDING = "sending";
@@ -28,10 +34,10 @@ export abstract class FileSender {
   static STATUS_CANCELING = "canceling";
   static STATUS_BUILDING = "building";
 
-  public onChunkLoad?: (data: ChunkUploadResponse) => void;
-  public onFileLoad?: () => void;
-  public onStatusUpdate?: (status: SendingStatus) => void;
-  public onError?: (message: string) => void;
+  public onChunkLoad?: FileSenderCallbacks['onChunkLoad'];
+  public onFileLoad?: FileSenderCallbacks['onFileLoad'];
+  public onStatusUpdate?: FileSenderCallbacks['onStatusUpdate'];
+  public onError?: FileSenderCallbacks['onError'];
 
   protected status: SendingStatus = 'notRunning';
   protected file: File;

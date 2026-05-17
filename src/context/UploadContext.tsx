@@ -1,5 +1,10 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { FileSender, type TDestinationDirId } from "../API/FileSender/FileSender.ts";
+import {
+  FileSender,
+  type SendingStatus,
+  type FileSenderCallbacks,
+  type TDestinationDirId,
+} from "../API/FileSender/FileSender.ts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { toast } from "react-toastify";
@@ -20,6 +25,8 @@ interface UploadContext {
 }
 
 const UploadContext = createContext<UploadContext | null>(null);
+
+const RETRIES_COUNT = 2;
 
 export const UploadProvider = ({ children }: { children: ReactNode }) => {
   const { uploadSessions, sessionsManager, countOfActiveUpload } = useUploadSessions();
@@ -48,171 +55,266 @@ export const UploadProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const addUploads: AddUploads = (files: File[], destinationDirId: TDestinationDirId) => {
-    files.forEach(file => {
-      if (file instanceof File) createUploadSession(file, destinationDirId);
-    });
+    files.forEach(file => createUploadSession(file, destinationDirId));
+  };
+
+  const resumeUploads: ResumeUploads = (resumeData: UploadResumeData[]) => {
+    resumeData.forEach(data => createResumeFileSender(data));
   };
 
   async function createUploadSession(file: File, destinationDirId: TDestinationDirId) {
-    const fileSender = new NewFileSender({ file, destinationDirId, retriesCount: 2 });
-    const generatedKey = file.name + file.size + file.lastModified + Date.now();
-    let sessionId: number | string;
-
-    fileSender.onChunkLoad = ({ progress }) => {
-      sessionsManager.updateSessionProgress(+sessionId, progress);
-    };
-
-    fileSender.onFileLoad = () => {
-      toast(`Файл "${file.name}" успешно загружен.`, {
-        type: "success",
-        position: "top-center",
-        autoClose: 2500,
-      });
-
-      sessionsManager.addReadySession({
-        sessionId: +sessionId,
-        onDelete: () => sessionsManager.deleteSession(sessionId),
-        onOpenDir: () => navigator(`/catalog/${destinationDirId}`),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ["dir", destinationDirId == "root" ? destinationDirId : +destinationDirId],
-      });
-      uploadsLocalStorageManager.deleteItem(+sessionId);
-    };
-
-    fileSender.onStatusUpdate = status => {
-      if (status == "preparing") {
-        sessionsManager.addPreparingSession({
-          id: generatedKey,
-          file,
-          status: "preparing",
-          destinationDirId,
-        });
-      } else if (status == "cancel" && !sessionId) {
-        sessionsManager.updateSessionStatus(generatedKey, status);
-      } else if (status == "cancel") {
-        uploadsLocalStorageManager.deleteItem(+sessionId);
-      } else if (status == "building") {
-        sessionsManager.updateSessionStatus(sessionId, status);
-      } else {
-        status == "sending" && sessionsManager.deleteSession(generatedKey);
-        sessionsManager.updateSessionStatus(sessionId, status);
-      }
-    };
-
-    fileSender.onError = message => {
-      if (!sessionId) {
-        sessionsManager.cancelSession(
-          ...generateCanceledSessionsParams(generatedKey, message, file, destinationDirId),
-        );
-      } else
-        sessionsManager.cancelSession(
-          ...generateCanceledSessionsParams(sessionId, message, file, destinationDirId),
-        );
-    };
-
-    fileSender.onSessionIni = (id, path) => {
-      sessionId = id;
-      uploadsLocalStorageManager.addItem(file, sessionId);
-
-      sessionsManager.addSendingUploadSession({
-        id: sessionId,
-        file,
-        status: "sending",
-        progress: 0,
-        path,
-        destinationDirId,
-        cancelUpload: async () => {
-          await fileSender.cancelSending();
-          (sessionsManager.cancelSession(
-            ...generateCanceledSessionsParams(id, "Отменен", file, destinationDirId),
-          ),
-            uploadsLocalStorageManager.deleteItem(id));
-        },
-      });
-    };
-
+    const fileSender = NewFileSenderCreator.create(file, destinationDirId, RETRIES_COUNT);
     fileSender.start();
   }
 
-  const resumeUploads: ResumeUploads = (resumeData: UploadResumeData[]) => {
-    resumeData.forEach(v => createResumeFileSender(v));
-  };
-
   function createResumeFileSender(resumeData: UploadResumeData) {
-    const fileSender = new ResumeFileSender({ resumeData, retriesCount: 2 });
+    const fileSender = ResumeFileSenderCreator.create(resumeData, RETRIES_COUNT);
+    fileSender.start();
+  }
 
-    fileSender.onChunkLoad = ({ progress }) => {
-      sessionsManager.updateSessionProgress(resumeData.id, progress);
-    };
+  abstract class FileSenderCreator {
+    protected initialize(fileSender: FileSender) {
+      fileSender.onChunkLoad = data => this.onChunkLoad(data);
+      fileSender.onError = msg => this.errorHandler(msg);
+      fileSender.onFileLoad = () => this.onFileLoad();
+      fileSender.onStatusUpdate = s => this.statusHandler(s);
+    }
 
-    fileSender.onFileLoad = () => {
-      toast(`Файл "${resumeData.file.name}" успешно загружен.`, {
+    private statusHandler(
+      ...args: Parameters<FileSenderCallbacks["onStatusUpdate"]>
+    ): ReturnType<FileSenderCallbacks["onStatusUpdate"]> {
+      const [status] = args;
+
+      if (status == "building") this.buildingStatusHandler();
+      else if (status == "cancel") this.cancelStatusHandler();
+      else if (status == "canceling") this.cancelingStatusHandler();
+      else if (status == "complete") this.completeStatusHandler();
+      else if (status == "sending") this.sendingStatusHandler();
+      else this.handleUnknownStatus(status);
+    }
+
+    protected onChunkLoad(
+      ...args: Parameters<FileSenderCallbacks["onChunkLoad"]>
+    ): ReturnType<FileSenderCallbacks["onChunkLoad"]> {
+      const progress = args[0].progress;
+      sessionsManager.updateSessionProgress(this.getSessionId(), progress);
+    }
+
+    protected onFileLoad(
+      ...args: Parameters<FileSenderCallbacks["onFileLoad"]>
+    ): ReturnType<FileSenderCallbacks["onFileLoad"]> {
+      toast(`Файл "${this.getFile().name}" успешно загружен.`, {
         type: "success",
         position: "top-center",
         autoClose: 2500,
       });
 
       sessionsManager.addReadySession({
-        sessionId: resumeData.id,
-        onDelete: () => sessionsManager.deleteSession(resumeData.id),
-        onOpenDir: () => navigator(`/catalog/${resumeData.destinationDirId}`),
+        sessionId: this.getSessionId(),
+        onDelete: () => sessionsManager.deleteSession(this.getSessionId()),
+        onOpenDir: () => navigator(`/catalog/${this.getDestinationDirId()}`),
       });
 
       queryClient.invalidateQueries({
         queryKey: [
           "dir",
-          resumeData.destinationDirId == "root" ? "root" : resumeData.destinationDirId,
+          this.getDestinationDirId() == "root" ? "root" : this.getDestinationDirId(),
         ],
       });
-      uploadsLocalStorageManager.deleteItem(resumeData.id);
-    };
+      uploadsLocalStorageManager.deleteItem(this.getSessionId());
+    }
 
-    fileSender.onStatusUpdate = status => {
-      if (status == "cancel") {
-        sessionsManager.updateSessionStatus(resumeData.id, status);
-        uploadsLocalStorageManager.deleteItem(resumeData.id);
-      } else if (status == FileSender.STATUS_BUILDING) {
-        sessionsManager.updateSessionStatus(resumeData.id, status);
-      } else {
-        sessionsManager.updateSessionStatus(resumeData.id, status);
-      }
-    };
+    protected cancelStatusHandler() {
+      sessionsManager.updateSessionStatus(this.getSessionId(), "cancel");
+      uploadsLocalStorageManager.deleteItem(this.getSessionId());
+    }
 
-    fileSender.onError = message => {
+    protected cancelingStatusHandler() {
+      sessionsManager.updateSessionStatus(this.getSessionId(), "canceling");
+    }
+
+    protected buildingStatusHandler() {
+      sessionsManager.updateSessionStatus(this.getSessionId(), "building");
+    }
+
+    protected completeStatusHandler() {
+      sessionsManager.updateSessionStatus(this.getSessionId(), "complete");
+    }
+
+    protected sendingStatusHandler() {
+      sessionsManager.updateSessionStatus(this.getSessionId(), "sending");
+    }
+
+    protected errorHandler(
+      ...args: Parameters<FileSenderCallbacks["onError"]>
+    ): ReturnType<FileSenderCallbacks["onError"]> {
+      const [message] = args;
+      this.cancelSession(this.getSessionId(), message);
+    }
+
+    protected cancelSession(id: number | string, message: string) {
       sessionsManager.cancelSession(
-        ...generateCanceledSessionsParams(
-          resumeData.id,
-          message,
-          resumeData.file,
-          resumeData.destinationDirId,
-        ),
+        ...generateCanceledSessionsParams(id, message, this.getFile(), this.getDestinationDirId()),
       );
+    }
+
+    protected abstract getSessionId(): number;
+    protected abstract getDestinationDirId(): TDestinationDirId;
+    protected abstract getFile(): File;
+    protected abstract handleUnknownStatus(status: SendingStatus): void;
+  }
+
+  class NewFileSenderCreator extends FileSenderCreator {
+    private sessionId?: number;
+    private generatedKey: string;
+    private file: File;
+    private destinationDirId: TDestinationDirId;
+    private fileSender: NewFileSender;
+
+    static create(file: File, destinationDirId: TDestinationDirId, retriesCount: number) {
+      return new NewFileSenderCreator(file, destinationDirId, retriesCount).create();
+    }
+
+    private constructor(file: File, destinationDirId: TDestinationDirId, retriesCount: number) {
+      super();
+      this.fileSender = new NewFileSender({ file, destinationDirId, retriesCount });
+      this.file = file;
+      this.destinationDirId = destinationDirId;
+      this.generatedKey = this.generateTmpKey(file);
+    }
+
+    private create(): FileSender {
+      super.initialize(this.fileSender);
+      this.fileSender.onSessionIni = (id, path) => this.onSessionIni(id, path);
+
+      return this.fileSender;
+    }
+
+    private generateTmpKey(file: File) {
+      return file.name + file.size + file.lastModified + Date.now() + Math.random() * 1000;
+    }
+
+    protected override errorHandler(message: string): ReturnType<FileSenderCallbacks["onError"]> {
+      if (this.sessionId) {
+        super.errorHandler(message);
+        return;
+      }
+
+      this.cancelSession(this.generatedKey, message);
+    }
+
+    protected override cancelStatusHandler(): void {
+      if (this.sessionId) {
+        super.cancelStatusHandler();
+        return;
+      }
+
+      sessionsManager.updateSessionStatus(this.generatedKey, "cancel");
+    }
+
+    protected override getSessionId(): number {
+      if (!this.sessionId) throw new Error("Сессия еще не инициализирована");
+      return this.sessionId;
+    }
+
+    protected override getDestinationDirId(): TDestinationDirId {
+      return this.destinationDirId;
+    }
+
+    protected override getFile(): File {
+      return this.file;
+    }
+
+    protected override handleUnknownStatus(status: SendingStatus): void {
+      if (status == "preparing") this.preparingStatusHandler();
+      if (status == "sending") this.sendingStatusHandler();
+    }
+
+    protected override sendingStatusHandler() {
+      sessionsManager.deleteSession(this.generatedKey);
+      if (!this.sessionId) throw new Error("Сессия не инициализирована");
+      super.sendingStatusHandler();
+    }
+
+    private onSessionIni: NonNullable<NewFileSender["onSessionIni"]> = (id, path) => {
+      this.sessionId = id;
+      uploadsLocalStorageManager.addItem(this.file, this.sessionId);
+
+      sessionsManager.addSendingUploadSession({
+        id: this.sessionId,
+        file: this.file,
+        status: "sending",
+        progress: 0,
+        path,
+        destinationDirId: this.destinationDirId,
+        cancelUpload: async () => {
+          await this.fileSender.cancelSending();
+          this.cancelSession(id, "Отменен");
+          uploadsLocalStorageManager.deleteItem(id);
+        },
+      });
     };
 
-    sessionsManager.addSendingUploadSession({
-      id: resumeData.id,
-      file: resumeData.file,
-      status: "sending",
-      path: resumeData.path,
-      destinationDirId: resumeData.destinationDirId,
-      progress: (resumeData.readyChunks.length / resumeData.chunksCount) * 100,
-      cancelUpload: async () => {
-        await fileSender.cancelSending();
-        sessionsManager.cancelSession(
-          ...generateCanceledSessionsParams(
-            resumeData.id,
-            "Отменен",
-            resumeData.file,
-            resumeData.destinationDirId,
-          ),
-        );
-        uploadsLocalStorageManager.deleteItem(resumeData.id);
-      },
-    });
+    private preparingStatusHandler() {
+      sessionsManager.addPreparingSession({
+        id: this.generatedKey,
+        file: this.file,
+        status: "preparing",
+        destinationDirId: this.destinationDirId,
+      });
+    }
+  }
 
-    fileSender.start();
+  class ResumeFileSenderCreator extends FileSenderCreator {
+    private resumeData: UploadResumeData;
+    private fileSender: ResumeFileSender;
+
+    static create(resumeData: UploadResumeData, retriesCount: number) {
+      return new ResumeFileSenderCreator(resumeData, retriesCount).create();
+    }
+
+    private constructor(resumeData: UploadResumeData, retriesCount: number) {
+      super();
+      this.resumeData = resumeData;
+      this.fileSender = new ResumeFileSender({ resumeData, retriesCount });
+    }
+
+    private create(): FileSender {
+      super.initialize(this.fileSender);
+
+      const originalFileSenderStart = this.fileSender.start.bind(this.fileSender);
+
+      this.fileSender.start = () => {
+        sessionsManager.addSendingUploadSession({
+          id: this.resumeData.id,
+          file: this.resumeData.file,
+          status: "sending",
+          path: this.resumeData.path,
+          destinationDirId: this.resumeData.destinationDirId,
+          progress: (this.resumeData.readyChunks.length / this.resumeData.chunksCount) * 100,
+          cancelUpload: async () => {
+            await this.fileSender.cancelSending();
+            this.cancelSession(this.resumeData.id, "Отменен");
+            uploadsLocalStorageManager.deleteItem(this.resumeData.id);
+          },
+        });
+
+        originalFileSenderStart();
+      };
+
+      return this.fileSender;
+    }
+
+    protected override getSessionId(): number {
+      return this.resumeData.id;
+    }
+    protected override getDestinationDirId(): TDestinationDirId {
+      return this.resumeData.destinationDirId;
+    }
+    protected override getFile(): File {
+      return this.resumeData.file;
+    }
+    protected override handleUnknownStatus(status: SendingStatus): void {}
   }
 
   return (
